@@ -32,4 +32,8 @@ pub struct Cli {
     /// Force rebuild of command trie cache (ignores cached .prunify/trie.json)
     #[arg(long)]
     pub rebuild_trie: bool,
+
+    /// List all known commands from project and global schemes
+    #[arg(short, long)]
+    pub list_commands: bool,
 }

@@ -19,6 +19,11 @@ fn main() -> PrunifyResult<()> {
 
     let cli = Cli::parse();
 
+    // If --list-commands, show all known schemes and exit
+    if cli.list_commands {
+        return list_known_commands(&cli);
+    }
+
     // If no command, enter interactive bash mode
     let command = match cli.command {
         Some(ref cmd) if !cmd.is_empty() => cmd.clone(),
@@ -120,6 +125,74 @@ fn load_setup(
     };
 
     Ok((config, project_schemes, fallback_schemes, trie))
+}
+
+/// List all known commands grouped by source (project-local vs global fallback).
+fn list_known_commands(cli: &Cli) -> PrunifyResult<()> {
+    let config_path = std::path::Path::new(".prunify.yaml");
+    let config = ConfigLoader::load(if config_path.exists() {
+        Some(config_path)
+    } else {
+        None
+    })?;
+
+    let config = if cli.scheme_dir.is_some() || cli.verbose || cli.strict {
+        PrunifyConfig {
+            scheme_dir: cli.scheme_dir.clone().map(PathBuf::from),
+            verbose: if cli.verbose { Some(true) } else { config.verbose },
+            no_color: config.no_color,
+            strict: if cli.strict { Some(true) } else { config.strict },
+        }
+    } else {
+        config
+    };
+
+    let fallback_dir = default_prunify_dir().join("schemes");
+    let loader = SchemeLoader::new(fallback_dir.clone());
+    let (project_schemes, fallback_schemes) = loader.load(&config)?;
+
+    let project_dir: PathBuf = config
+        .scheme_dir
+        .clone()
+        .unwrap_or_else(|| {
+            let local = PathBuf::from(".prunify").join("schemes");
+            if local.exists() {
+                local
+            } else {
+                fallback_dir.clone()
+            }
+        });
+
+    // Build sorted command lists
+    let mut project_cmds: Vec<&String> = project_schemes.keys().collect();
+    project_cmds.sort();
+    let mut fallback_cmds: Vec<&String> = fallback_schemes.keys().collect();
+    fallback_cmds.sort();
+
+    println!("Known commands:");
+    println!();
+
+    if !project_cmds.is_empty() {
+        println!("  Local ({}):", project_dir.display());
+        for cmd in &project_cmds {
+            println!("    {cmd}");
+        }
+        println!();
+    }
+
+    if !fallback_cmds.is_empty() {
+        println!("  Global ({}):", fallback_dir.display());
+        for cmd in &fallback_cmds {
+            println!("    {cmd}");
+        }
+        println!();
+    }
+
+    if project_cmds.is_empty() && fallback_cmds.is_empty() {
+        println!("  (no scheme files found)");
+    }
+
+    Ok(())
 }
 
 /// Execute a command and return its (possibly pruned) output along with the exit code.
