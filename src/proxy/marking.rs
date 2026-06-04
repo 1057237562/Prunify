@@ -1,6 +1,8 @@
 use crate::proxy::dispatcher::DispatchMode;
 
 /// Appends [PRUNED] or [UNKNOWN COMMAND] marks to the end of pruned output.
+/// Each mark includes a prompt to use the `prunify skill` to create or
+/// optimize a scheme.
 ///
 /// Marks go to stdout (appended at end of output), not stderr.
 pub struct OutputMarker;
@@ -28,19 +30,19 @@ impl OutputMarker {
             DispatchMode::PrefixMatch(_) => {
                 if output.is_empty() {
                     format!(
-                        "[PRUNED] (prefix match: {matched_tokens} tokens — scheme may be suboptimal)\n"
+                        "[PRUNED] (prefix match: {matched_tokens} tokens — use `prunify skill` to optimize scheme)\n"
                     )
                 } else {
                     format!(
-                        "{output}\n[PRUNED] (prefix match: {matched_tokens} tokens — scheme may be suboptimal)\n"
+                        "{output}\n[PRUNED] (prefix match: {matched_tokens} tokens — use `prunify skill` to optimize scheme)\n"
                     )
                 }
             }
             DispatchMode::Passthrough => {
                 if output.is_empty() {
-                    "[UNKNOWN COMMAND] (no scheme found — output is raw)\n".to_string()
+                    "[UNKNOWN COMMAND] (no scheme found — use `prunify skill` to create scheme)\n".to_string()
                 } else {
-                    format!("{output}\n[UNKNOWN COMMAND] (no scheme found — output is raw)\n")
+                    format!("{output}\n[UNKNOWN COMMAND] (no scheme found — use `prunify skill` to create scheme)\n")
                 }
             }
         }

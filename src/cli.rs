@@ -21,7 +21,7 @@ pub struct Cli {
     #[arg(short, long)]
     pub verbose: bool,
 
-    /// Disable [PRUNED] and [UNKNOWN COMMAND] marks
+    /// Disable [PRUNED] and [UNKNOWN COMMAND] marks (which prompt use of `prunify skill`)
     #[arg(long)]
     pub no_mark: bool,
 

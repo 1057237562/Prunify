@@ -32,7 +32,7 @@ prunify $ cargo test
 prunify $ exit
 ```
 
-When no scheme exists for a command, output passes through unchanged with an `[UNKNOWN COMMAND]` marker.
+When no scheme exists for a command, output passes through unchanged with an `[UNKNOWN COMMAND]` marker — prompting you to tell your agent to `use prunify skill` to create a scheme.
 
 ---
 
@@ -75,8 +75,8 @@ Prunify executes your command, captures its output, and routes it through a **di
 | Mode | Description | Marker |
 |---|---|---|
 | `ExactMatch` | Command matched exactly in the trie | None |
-| `PrefixMatch` | Command matched a prefix (e.g. `git status --short`) | `[PRUNED] (prefix match: N tokens)` |
-| `Passthrough` | No scheme found — raw output | `[UNKNOWN COMMAND]` |
+| `PrefixMatch` | Command matched a prefix (e.g. `git status --short`) | `[PRUNED] (prefix match: N tokens — use \`prunify skill\` to optimize scheme)` |
+| `Passthrough` | No scheme found — raw output | `[UNKNOWN COMMAND] (no scheme found — use \`prunify skill\` to create scheme)` |
 
 ---
 
@@ -159,7 +159,7 @@ CLI flags override config file values:
 |---|---|---|
 | `--scheme-dir <DIR>` | | Custom scheme directory |
 | `--verbose` | `-v` | Verbose logging |
-| `--no-mark` | | Suppress `[PRUNED]` / `[UNKNOWN COMMAND]` marks |
+| `--no-mark` | | Suppress `[PRUNED]` / `[UNKNOWN COMMAND]` marks (which prompt use of `prunify skill`) |
 | `--strict` | | Reject unknown commands with error |
 | `--rebuild-trie` | | Force rebuild of command trie cache |
 | `--help` | `-h` | Print help |
@@ -213,16 +213,22 @@ src/
 
 ---
 
-## OpenCode Skill
+## Agent Skill
 
-This project includes an [OpenCode](https://github.com/oh-my-open-code/opencode) skill at `.opencode/skills/prunifier/SKILL.md`. It provides workflow guidance for:
+This project includes an agent skill at `.opencode/skills/prunify/SKILL.md` compatible
+with **OpenCode**, **Claude Code**, **Cline**, **Aider**, and other agentic coding
+frameworks. It provides workflow guidance for:
 
-- **Scheme generation** — step-by-step instructions for creating pruning schemes via subagents (`explore`, `librarian`, `deep`)
-- **Mode-aware workflows** — specific guidance for Prefix Match (`[PRUNED]` → optimize) and Passthrough (`[UNKNOWN COMMAND]` → create new scheme)
-- **Pruning strategy** — a systematic line-auditing method with three noise levels (Conservative / Moderate / Aggressive) and rule design principles
+- **Scheme generation** — step-by-step instructions for creating pruning schemes using
+  your agent's native tools for pattern analysis, format research, and file creation
+- **Mode-aware workflows** — specific guidance for Prefix Match (`[PRUNED]` → optimize)
+  and Passthrough (`[UNKNOWN COMMAND]` → create new scheme)
+- **Pruning strategy** — a systematic line-auditing method with three noise levels
+  (Conservative / Moderate / Aggressive) and rule design principles
 - **Decision guide** — when to prune and when not to
 
-The skill is triggered by keywords like `prunify`, `prune output`, or `trim output`. The `prunify` binary works standalone without OpenCode; the skill is documentation for agent-driven scheme generation.
+The `prunify` binary works standalone without any agent framework; the skill is
+documentation for agent-driven scheme generation.
 
 ---
 

@@ -13,6 +13,22 @@ triggers:
 
 Proxy and prune bash command output using JSON schemes.
 
+## Framework Compatibility
+
+This skill works with any agentic coding framework — **OpenCode**, **Claude Code**,
+**Cline**, **Aider**, **CodeBuff**, and others. The workflows reference agent types
+and tools by their OpenCode names (`explore`, `librarian`, `deep`), but every
+framework provides equivalent capabilities:
+
+| Capability | OpenCode | Claude Code | Cline |
+|---|---|---|---|
+| File/code search | `explore` | `/Error` or `grep` | `search` |
+| External reference lookup | `librarian` | web search via `/thinking` | `fetch` |
+| Complex multi-step execution | `deep` | `/thinking` | `plan` |
+| File I/O | direct tools | direct tools | direct tools |
+
+Adapt the agent type names in each workflow to your framework's conventions.
+
 ## Installation
 
 ```bash
@@ -37,7 +53,7 @@ prunify --scheme-dir ./custom-schemes --no-mark git status
 |------|-------------|
 | `--scheme-dir <path>` | Custom directory for scheme JSON files (default: `.prunify/schemes/`) |
 | `--verbose` | Enable verbose logging |
-| `--no-mark` | Disable `[PRUNED]` and `[UNKNOWN COMMAND]` marks in output |
+| `--no-mark` | Disable `[PRUNED]` and `[UNKNOWN COMMAND]` marks (which prompt use of `prunify skill`) |
 | `--strict` | Reject unknown commands with an error instead of passthrough |
 | `--rebuild-trie` | Force rebuild of the command trie cache (ignores `.prunify/trie.json`) |
 
@@ -83,22 +99,24 @@ with the known scheme.
 Output is pruned using the matched scheme. A `[PRUNED]` mark is appended:
 
 ```
-[PRUNED] (prefix match: 2 tokens -- scheme may be suboptimal)
+[PRUNED] (prefix match: 2 tokens -- use `prunify skill` to optimize scheme)
 ```
 
 This mark signals that the scheme may not be optimal for the full command.
-When the skill detects this mark, consider spawning a subagent to generate a
-more specific scheme.
+When you see this mark, delegate scheme creation to your agent:
+
+- **OpenCode**: `explore` (pattern analysis), `librarian` (format research), `deep` (complex design)
+- **Claude Code**: Use `/thinking` for analysis, web search for format research
+- **Cline**: Use `search` for output patterns, `fetch` for command format docs
+- **Other**: Use your framework's equivalent of code search, web lookup, and file creation
 
 #### Workflow: Optimizing a Prefix Match
 
 1. **Run raw**: Execute the command without prunify to see the full output
 2. **Audit**: Classify every line using [Pruning Strategy](#pruning-strategy) below
 3. **Design**: Create an optimized scheme JSON for the specific flags
-4. **Choose subagent**: Delegate scheme creation to a subagent:
-   - `explore` -- good for analyzing output patterns and finding noise
-   - `librarian` -- good when researching command output formats
-   - `deep` -- good for complex scheme design with multiple rules
+4. **Choose agent approach**: Delegate scheme creation to your agent using
+   its native tools for pattern analysis, format research, and file writing
 5. **Write**: Save the optimized scheme to
    `.prunify/schemes/<command-slug>.json`
 6. **Verify**: Run `prunify <command>` again. The `[PRUNED]` mark should
@@ -119,7 +137,7 @@ scheme. The verbose scheme's rules often don't fit the short format:
 
 **After (pruned through the verbose `git status` scheme — all lines dropped):**
 ```
-[PRUNED] (prefix match: 2 tokens -- scheme may be suboptimal)
+[PRUNED] (prefix match: 2 tokens -- use `prunify skill` to optimize scheme)
 ```
 
 The verbose scheme keeps only tab-indented lines (`^\t`), but `--short` output
@@ -133,11 +151,11 @@ No matching scheme exists for the command. Raw output is passed through
 unmodified. A `[UNKNOWN COMMAND]` mark is appended:
 
 ```
-[UNKNOWN COMMAND] (no scheme found -- output is raw)
+[UNKNOWN COMMAND] (no scheme found -- use `prunify skill` to create scheme)
 ```
 
-When the skill detects this mark, consider spawning a subagent to analyze the
-command output and generate a new scheme.
+When you see this mark, delegate scheme creation to your agent (see
+agent mapping in the [Prefix Match](#2-prefix-match) section).
 
 #### Workflow: Creating a Scheme for an Unknown Command
 
@@ -145,7 +163,8 @@ command output and generate a new scheme.
 2. **Audit**: Classify every line using [Pruning Strategy](#pruning-strategy) below
 3. **Design rules**: Combine `discard` (remove known noise) and optionally
    `keep` (retain only relevant lines) rules
-4. **Choose subagent**: Same as prefix match workflow
+4. **Choose agent approach**: Same as prefix match workflow — use your
+   framework's native tools for analysis, research, and file creation
 5. **Write**: Save to `.prunify/schemes/<command-slug>.json`
 6. **Verify**: Run `prunify <command>` again. The `[UNKNOWN COMMAND]` mark
    should disappear (exact match now)
@@ -400,10 +419,11 @@ The trie file is JSON and can be inspected manually (`cat .prunify/trie.json`).
 
 ## Standalone Note
 
-The `prunify` binary works entirely standalone. You can use it without this
-skill or OpenCode. The skill provides workflow guidance for scheme generation
-via subagents (e.g., detecting `[PRUNED]` or `[UNKNOWN COMMAND]` marks and
-spawning explore/librarian agents to create new schemes).
+The `prunify` binary works entirely standalone — no agent framework required.
+This skill provides workflow guidance for agent-driven scheme generation
+(e.g., detecting `[PRUNED]` or `[UNKNOWN COMMAND]` marks and having your agent
+create or refine schemes). It is compatible with OpenCode, Claude Code, Cline,
+Aider, and any other agentic coding tool.
 
 ## Decision Guide: When to Prune
 
@@ -427,8 +447,8 @@ When `[PRUNED]` appears, the existing scheme is close but not exact:
 2. **Audit**: Use the [Pruning Strategy](#pruning-strategy) to classify lines
 3. **Diff**: Compare raw vs pruned — what was lost? What noise survived?
 4. **Design**: Create a new scheme for the specific command (with all flags)
-5. **Choose subagent**: Delegate to `explore` (pattern analysis), `librarian`
-   (format research), or `deep` (complex multi-rule design)
+5. **Choose agent approach**: Delegate to your framework's analysis tools
+   (code search for patterns, web search for format docs, etc.)
 6. **Write**: Save to `.prunify/schemes/<command-slug>.json`
 7. **Verify**: `[PRUNED]` mark should disappear; target ≥80% reduction
 

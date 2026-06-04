@@ -70,7 +70,14 @@ fn load_setup(cli: &Cli) -> PrunifyResult<(PrunifyConfig, HashMap<String, Scheme
     let project_dir: PathBuf = config
         .scheme_dir
         .clone()
-        .unwrap_or_else(|| default_prunify_dir().join("schemes"));
+        .unwrap_or_else(|| {
+            let local = PathBuf::from(".prunify").join("schemes");
+            if local.exists() {
+                local
+            } else {
+                default_prunify_dir().join("schemes")
+            }
+        });
     let trie_path = default_prunify_dir().join("trie.json");
     let rebuild_trie = cli.rebuild_trie
         || CommandTrie::is_trie_stale(&trie_path, &[&default_dir, &project_dir]);
@@ -132,6 +139,8 @@ fn execute_and_format(
     let stdout_str = String::from_utf8_lossy(&result.stdout);
     let (pruned, mode) = dispatcher.dispatch(&command_str, &stdout_str)?;
 
+    let pruned_stderr = dispatcher.dispatch(&command_str, &result.stderr)?.0;
+
     // Mark output
     let tokens = match &mode {
         DispatchMode::PrefixMatch(n) => *n,
@@ -147,7 +156,7 @@ fn execute_and_format(
         output
     };
 
-    Ok((formatted, result.stderr, result.exit_code))
+    Ok((formatted, pruned_stderr, result.exit_code))
 }
 
 /// Execute a command and write its output directly to stdout/stderr.

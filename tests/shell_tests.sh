@@ -76,7 +76,7 @@ else
 fi
 
 # -----------------------------------------------------------------------
-# Test 3 — MODE 2 (prefix match): ls -la --color=auto returns [PRUNED]
+# Test 3 — MODE 2 (prefix match): ls -la --color=auto returns [PRUNED] mark
 # -----------------------------------------------------------------------
 test3() {
     local output

@@ -13,7 +13,7 @@ fn test_prefix_match_appends_pruned_mark() {
     let output = "pruned content\nline two\n";
     let result = OutputMarker::mark_pruned(output, &DispatchMode::PrefixMatch(3), 3, false);
     let expected = format!(
-        "{}\n[PRUNED] (prefix match: {} tokens — scheme may be suboptimal)\n",
+        "{}\n[PRUNED] (prefix match: {} tokens — use `prunify skill` to optimize scheme)\n",
         output, 3
     );
     assert_eq!(result, expected);
@@ -24,7 +24,7 @@ fn test_passthrough_appends_unknown_command_mark() {
     let output = "raw output\n";
     let result = OutputMarker::mark_pruned(output, &DispatchMode::Passthrough, 0, false);
     let expected = format!(
-        "{}\n[UNKNOWN COMMAND] (no scheme found — output is raw)\n",
+        "{}\n[UNKNOWN COMMAND] (no scheme found — use `prunify skill` to create scheme)\n",
         output
     );
     assert_eq!(result, expected);

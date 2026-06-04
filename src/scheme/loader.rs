@@ -40,7 +40,17 @@ impl SchemeLoader {
         let project_dir = config
             .scheme_dir
             .clone()
-            .unwrap_or_else(|| crate::config::default_prunify_dir().join("schemes"));
+            .unwrap_or_else(|| {
+                // Check project-local .prunify/schemes/ before falling back
+                // to the home directory default. This enables schemes bundled
+                // with a repository to work without a .prunify.yaml config.
+                let local = PathBuf::from(".prunify").join("schemes");
+                if local.exists() {
+                    local
+                } else {
+                    crate::config::default_prunify_dir().join("schemes")
+                }
+            });
 
         // Load project overrides (completely replaces defaults for same command)
         let project_schemes = SchemeStorage::load_all(&project_dir)?;
