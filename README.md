@@ -213,6 +213,19 @@ src/
 
 ---
 
+## OpenCode Skill
+
+This project includes an [OpenCode](https://github.com/oh-my-open-code/opencode) skill at `.opencode/skills/prunifier/SKILL.md`. It provides workflow guidance for:
+
+- **Scheme generation** — step-by-step instructions for creating pruning schemes via subagents (`explore`, `librarian`, `deep`)
+- **Mode-aware workflows** — specific guidance for Prefix Match (`[PRUNED]` → optimize) and Passthrough (`[UNKNOWN COMMAND]` → create new scheme)
+- **Pruning strategy** — a systematic line-auditing method with three noise levels (Conservative / Moderate / Aggressive) and rule design principles
+- **Decision guide** — when to prune and when not to
+
+The skill is triggered by keywords like `prunify`, `prune output`, or `trim output`. The `prunify` binary works standalone without OpenCode; the skill is documentation for agent-driven scheme generation.
+
+---
+
 ## License
 
 MIT

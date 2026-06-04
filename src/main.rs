@@ -100,20 +100,21 @@ fn load_setup(cli: &Cli) -> PrunifyResult<(PrunifyConfig, HashMap<String, Scheme
     Ok((config, schemes, trie))
 }
 
-/// Execute a command and print its (possibly pruned) output.
-/// Returns the exit code of the command.
-fn execute_and_print(
+/// Execute a command and return its (possibly pruned) output along with the exit code.
+///
+/// Returns `(formatted_stdout, stderr, exit_code)`. The output is fully formatted
+/// (scheme-pruned + marked) but NOT printed — the caller handles output.
+fn execute_and_format(
     args: &[String],
     _config: &PrunifyConfig,
     dispatcher: &Dispatcher,
     cli: &Cli,
-) -> PrunifyResult<i32> {
+) -> PrunifyResult<(String, String, i32)> {
     let command_str = args.join(" ");
 
     // Recursion guard
     if RecursionGuard::is_recursive(&command_str) {
-        eprintln!("prunify: recursion detected — bypassing proxy");
-        return Ok(0);
+        return Ok((String::new(), "prunify: recursion detected — bypassing proxy\n".to_string(), 0));
     }
 
     // TTY passthrough — interactive commands bypass proxy
@@ -121,7 +122,7 @@ fn execute_and_print(
         let status = std::process::Command::new(&args[0])
             .args(&args[1..])
             .status()?;
-        return Ok(status.code().unwrap_or(1));
+        return Ok((String::new(), String::new(), status.code().unwrap_or(1)));
     }
 
     // Execute
@@ -138,17 +139,31 @@ fn execute_and_print(
     };
     let output = OutputMarker::mark_pruned(&pruned, &mode, tokens, cli.no_mark);
 
-    // Print
-    if cli.no_mark && mode == DispatchMode::Passthrough {
-        std::io::stdout().write_all(&result.stdout)?;
+    // In passthrough+no-mark mode, use the raw bytes to preserve binary data.
+    // Convert lossily here since we're returning a String anyway.
+    let formatted = if cli.no_mark && mode == DispatchMode::Passthrough {
+        String::from_utf8_lossy(&result.stdout).to_string()
     } else {
-        print!("{}", output);
-    }
-    if !result.stderr.is_empty() {
-        eprint!("{}", result.stderr);
-    }
+        output
+    };
 
-    Ok(result.exit_code)
+    Ok((formatted, result.stderr, result.exit_code))
+}
+
+/// Execute a command and write its output directly to stdout/stderr.
+/// Returns the exit code.
+fn execute_and_print(
+    args: &[String],
+    config: &PrunifyConfig,
+    dispatcher: &Dispatcher,
+    cli: &Cli,
+) -> PrunifyResult<i32> {
+    let (stdout, stderr, exit_code) = execute_and_format(args, config, dispatcher, cli)?;
+    print!("{}", stdout);
+    if !stderr.is_empty() {
+        eprint!("{}", stderr);
+    }
+    Ok(exit_code)
 }
 
 /// Interactive bash mode: enter a REPL where each command is executed
@@ -184,9 +199,25 @@ fn run_interactive(cli: Cli) -> PrunifyResult<()> {
         }
 
         // Run through the prunify pipeline, but don't exit on failure
-        let result = execute_and_print(&args, &config, &dispatcher, &cli);
+        let result = execute_and_format(&args, &config, &dispatcher, &cli);
         match result {
-            Ok(_exit_code) => {}
+            Ok((stdout, stderr, _exit_code)) => {
+                let has_output = !stdout.is_empty() || !stderr.is_empty();
+
+                if !stdout.is_empty() {
+                    print!("{}", stdout);
+                }
+                if !stderr.is_empty() {
+                    eprint!("{}", stderr);
+                }
+
+                // Ensure the next prompt starts on a fresh line.
+                // If neither stdout nor stderr ended with a newline,
+                // or if there was no output at all, insert one.
+                if !has_output || (!stdout.ends_with('\n') && !stderr.ends_with('\n')) {
+                    println!();
+                }
+            }
             Err(e) => {
                 eprintln!("prunify: error: {e}");
             }
