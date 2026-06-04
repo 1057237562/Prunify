@@ -1,35 +1,35 @@
 use std::fs;
 use std::path::Path;
 
-use crate::config::types::PrunifierConfig;
-use crate::error::PrunifierError;
-use crate::error::PrunifierResult;
+use crate::config::types::PrunifyConfig;
+use crate::error::PrunifyError;
+use crate::error::PrunifyResult;
 
-/// Loads `.prunifier.yaml` from disk and deserializes it into `PrunifierConfig`.
+/// Loads `.prunify.yaml` from disk and deserializes it into `PrunifyConfig`.
 ///
-/// If the path is `None` or the file does not exist, returns `PrunifierConfig::default()`
+/// If the path is `None` or the file does not exist, returns `PrunifyConfig::default()`
 /// (not an error). Fields absent from the YAML are filled from the default.
 pub struct ConfigLoader;
 
 impl ConfigLoader {
     /// Load config from the given path.
     ///
-    /// - `None` path or missing file → `PrunifierConfig::default()`
+    /// - `None` path or missing file → `PrunifyConfig::default()`
     /// - Valid YAML → deserialized config with defaults applied for absent fields
-    /// - Invalid YAML → `PrunifierError::ConfigError`
-    pub fn load(path: Option<&Path>) -> PrunifierResult<PrunifierConfig> {
+    /// - Invalid YAML → `PrunifyError::ConfigError`
+    pub fn load(path: Option<&Path>) -> PrunifyResult<PrunifyConfig> {
         let path = match path {
             Some(p) if p.exists() => p,
-            _ => return Ok(PrunifierConfig::default()),
+            _ => return Ok(PrunifyConfig::default()),
         };
 
         let contents = fs::read_to_string(path)?;
 
-        let mut config: PrunifierConfig = serde_yaml::from_str(&contents)
-            .map_err(|e| PrunifierError::ConfigError(e.to_string()))?;
+        let mut config: PrunifyConfig = serde_yaml::from_str(&contents)
+            .map_err(|e| PrunifyError::ConfigError(e.to_string()))?;
 
         // Merge defaults: fields not present in YAML (None) → use default value
-        let defaults = PrunifierConfig::default();
+        let defaults = PrunifyConfig::default();
         if config.scheme_dir.is_none() {
             config.scheme_dir = defaults.scheme_dir;
         }
@@ -58,7 +58,7 @@ mod tests {
 
     fn write_temp_yaml(content: &str) -> PathBuf {
         let counter = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join("prunifier_test_config_loader");
+        let dir = std::env::temp_dir().join("prunify_test_config_loader");
         std::fs::create_dir_all(&dir).expect("create temp dir");
         let path = dir.join(format!("test_{}.yaml", counter));
         let mut file = std::fs::File::create(&path).expect("create temp file");
@@ -87,11 +87,11 @@ strict: true"#,
 
     #[test]
     fn test_missing_config_uses_defaults() {
-        let non_existent = Path::new("/tmp/does_not_exist_prunifier_config.yaml");
+        let non_existent = Path::new("/tmp/does_not_exist_prunify_config.yaml");
         let config = ConfigLoader::load(Some(non_existent))
             .expect("missing file should not error, returns default");
 
-        let defaults = PrunifierConfig::default();
+        let defaults = PrunifyConfig::default();
         assert_eq!(config.scheme_dir, defaults.scheme_dir);
         assert_eq!(config.verbose, defaults.verbose);
         assert_eq!(config.no_color, defaults.no_color);
@@ -106,7 +106,7 @@ strict: true"#,
         assert!(result.is_err(), "invalid YAML should produce an error");
 
         match result {
-            Err(PrunifierError::ConfigError(msg)) => {
+            Err(PrunifyError::ConfigError(msg)) => {
                 assert!(!msg.is_empty(), "error message should not be empty");
             }
             other => panic!("expected ConfigError, got {:?}", other),

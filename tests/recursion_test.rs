@@ -1,4 +1,4 @@
-use prunifier::proxy::recursion_guard::RecursionGuard;
+use prunify::proxy::recursion_guard::RecursionGuard;
 
 /// Verify that "prunify" as the first token is detected as recursive.
 /// This covers direct invocation and invocations with arguments.
@@ -18,16 +18,16 @@ fn test_detect_self_invocation() {
     );
 }
 
-/// Verify that "prunifier" (debug binary name) as first token is also detected.
+/// Verify that "prunify" (debug binary name) as first token is also detected.
 #[test]
 fn test_detect_nested_prunify() {
     assert!(
-        RecursionGuard::is_recursive("prunifier"),
-        "bare 'prunifier' should be recursive"
+        RecursionGuard::is_recursive("prunify"),
+        "bare 'prunify' should be recursive"
     );
     assert!(
-        RecursionGuard::is_recursive("prunifier --scheme scheme.json"),
-        "'prunifier' with args should be recursive"
+        RecursionGuard::is_recursive("prunify --scheme scheme.json"),
+        "'prunify' with args should be recursive"
     );
 }
 
@@ -74,7 +74,7 @@ fn test_different_path_prunify() {
         "'prunify' in non-first token should not be recursive"
     );
 
-    // Should be flagged: first token is a path whose file stem is "prunify" or "prunifier"
+    // Should be flagged: first token is a path whose file stem is "prunify"
     assert!(
         RecursionGuard::is_recursive("./target/debug/prunify"),
         "path to prunify binary should be recursive"
@@ -84,7 +84,7 @@ fn test_different_path_prunify() {
         "full path to prunify binary should be recursive"
     );
     assert!(
-        RecursionGuard::is_recursive("./target/debug/prunifier"),
-        "path to prunifier binary should be recursive"
+        RecursionGuard::is_recursive("./target/debug/prunify"),
+        "path to prunify binary should be recursive"
     );
 }

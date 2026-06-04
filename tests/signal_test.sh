@@ -1,7 +1,7 @@
 #!/bin/bash
 # signal_test.sh — Verify SIGINT and SIGTERM forwarding to child process
 #
-# Starts prunifier with a long-running command (sleep 30), sends a signal
+# Starts prunify with a long-running command (sleep 30), sends a signal
 # (SIGINT or SIGTERM), and verifies the signal reaches the child (process
 # exits quickly, not after the full sleep duration).
 #
@@ -11,7 +11,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PRUNIFIER_BIN="$SCRIPT_DIR/../target/debug/prunifier"
+PRUNIFY_BIN="$SCRIPT_DIR/../target/debug/prunify"
 
 PASS=0
 FAIL=0
@@ -20,33 +20,33 @@ green() { printf "\033[32m%s\033[0m\n" "$1"; }
 red()   { printf "\033[31m%s\033[0m\n" "$1"; }
 
 echo ""
-echo "=== prunifier signal forwarding test ==="
+echo "=== prunify signal forwarding test ==="
 echo ""
 
 # -----------------------------------------------------------------------
 # Test 1 — SIGINT reaches the child process
 # -----------------------------------------------------------------------
 test1() {
-    local prunifier_pid start_time end_time elapsed
+    local prunify_pid start_time end_time elapsed
 
-    # Start prunifier with a 30-second sleep in the background
-    "$PRUNIFIER_BIN" sleep 30 &
-    prunifier_pid=$!
+    # Start prunify with a 30-second sleep in the background
+    "$PRUNIFY_BIN" sleep 30 &
+    prunify_pid=$!
 
     # Give it a moment to spawn the child and register the PID
     sleep 1
 
-    # Send SIGINT to prunifier — handler must forward to child
+    # Send SIGINT to prunify — handler must forward to child
     start_time=$(date +%s)
-    kill -INT "$prunifier_pid"
+    kill -INT "$prunify_pid"
 
-    # Wait for prunifier to exit (should return quickly, not 30s from sleep)
-    wait "$prunifier_pid" 2>/dev/null || true
+    # Wait for prunify to exit (should return quickly, not 30s from sleep)
+    wait "$prunify_pid" 2>/dev/null || true
     end_time=$(date +%s)
 
     elapsed=$((end_time - start_time))
 
-    # If the signal was properly forwarded, sleep was killed and prunifier
+    # If the signal was properly forwarded, sleep was killed and prunify
     # exited in well under 30 seconds. Use 10s as a generous upper bound.
     if [ "$elapsed" -lt 10 ]; then
         return 0
@@ -69,7 +69,7 @@ fi
 test2() {
     local output
 
-    output=$("$PRUNIFIER_BIN" echo "signal-test-ok" 2>/dev/null)
+    output=$("$PRUNIFY_BIN" echo "signal-test-ok" 2>/dev/null)
     echo "$output" | grep -q "signal-test-ok" || return 1
     return 0
 }
@@ -85,26 +85,26 @@ fi
 # Test 3 — SIGTERM reaches the child process
 # -----------------------------------------------------------------------
 test3() {
-    local prunifier_pid start_time end_time elapsed
+    local prunify_pid start_time end_time elapsed
 
-    # Start prunifier with a 30-second sleep in the background
-    "$PRUNIFIER_BIN" sleep 30 &
-    prunifier_pid=$!
+    # Start prunify with a 30-second sleep in the background
+    "$PRUNIFY_BIN" sleep 30 &
+    prunify_pid=$!
 
     # Give it a moment to spawn the child and register the PID
     sleep 1
 
-    # Send SIGTERM to prunifier — handler must forward to child
+    # Send SIGTERM to prunify — handler must forward to child
     start_time=$(date +%s)
-    kill -TERM "$prunifier_pid"
+    kill -TERM "$prunify_pid"
 
-    # Wait for prunifier to exit (should return quickly, not 30s from sleep)
-    wait "$prunifier_pid" 2>/dev/null || true
+    # Wait for prunify to exit (should return quickly, not 30s from sleep)
+    wait "$prunify_pid" 2>/dev/null || true
     end_time=$(date +%s)
 
     elapsed=$((end_time - start_time))
 
-    # If the signal was properly forwarded, sleep was killed and prunifier
+    # If the signal was properly forwarded, sleep was killed and prunify
     # exited in well under 30 seconds. Use 10s as a generous upper bound.
     if [ "$elapsed" -lt 10 ]; then
         return 0

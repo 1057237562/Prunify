@@ -1,4 +1,4 @@
-use prunifier::proxy::CommandExecutor;
+use prunify::proxy::CommandExecutor;
 
 #[test]
 fn test_execute_simple_command() {

@@ -1,4 +1,4 @@
-# Prunifier Scheme Specification (v1)
+# Prunify Scheme Specification (v1)
 
 ## Overview
 

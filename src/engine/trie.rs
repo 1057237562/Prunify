@@ -1,11 +1,16 @@
 use std::collections::HashMap;
+use std::path::Path;
 
-#[derive(Debug, Default)]
+use serde::{Deserialize, Serialize};
+
+use crate::error::PrunifyResult;
+
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct CommandTrie {
     root: TrieNode,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 struct TrieNode {
     children: HashMap<String, TrieNode>,
     scheme_id: Option<String>,
@@ -62,6 +67,64 @@ impl CommandTrie {
         }
 
         best
+    }
+
+    /// Save the trie to a JSON file for fast reload on subsequent runs.
+    ///
+    /// Creates parent directories if they don't exist.
+    pub fn save_to_file(&self, path: impl AsRef<Path>) -> PrunifyResult<()> {
+        let path = path.as_ref();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let bytes = serde_json::to_vec(self)?;
+        std::fs::write(path, bytes)?;
+        Ok(())
+    }
+
+    /// Load a trie previously saved with [`save_to_file`].
+    ///
+    /// Returns an error if the file doesn't exist or contains invalid data.
+    pub fn load_from_file(path: impl AsRef<Path>) -> PrunifyResult<Self> {
+        let bytes = std::fs::read(path.as_ref())?;
+        let trie: CommandTrie = serde_json::from_slice(&bytes)?;
+        Ok(trie)
+    }
+
+    /// Check whether the cached trie file is stale relative to scheme files.
+    ///
+    /// Returns `true` if:
+    /// - The trie file does not exist, or
+    /// - Any `.json` scheme file in one of the given directories has a newer
+    ///   modification time than the trie file.
+    ///
+    /// Non-existent directories in `scheme_dirs` are silently skipped.
+    pub fn is_trie_stale(trie_path: &Path, scheme_dirs: &[&Path]) -> bool {
+        let trie_mtime = match std::fs::metadata(trie_path).and_then(|m| m.modified()) {
+            Ok(t) => t,
+            Err(_) => return true, // no trie file → stale
+        };
+
+        for dir in scheme_dirs {
+            if !dir.exists() {
+                continue;
+            }
+            let entries = match std::fs::read_dir(dir) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) == Some("json") {
+                    if let Ok(mtime) = path.metadata().and_then(|m| m.modified()) {
+                        if mtime > trie_mtime {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
 }
 

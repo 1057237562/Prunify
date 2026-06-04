@@ -5,7 +5,7 @@ fn test_random_binary_data_detected_as_binary() {
         .map(|i| ((i % 200) as u8).wrapping_add(0x80))
         .collect();
     assert!(
-        prunifier::proxy::binary_detector::BinaryDetector::is_binary(&binary_data),
+        prunify::proxy::binary_detector::BinaryDetector::is_binary(&binary_data),
         "Binary data with >30% non-printable chars should be detected as binary"
     );
 }
@@ -24,7 +24,7 @@ More text here to ensure we have a decent sample size for the ratio calculation.
 Alright, this should be more than enough printable text to pass the test.";
 
     assert!(
-        !prunifier::proxy::binary_detector::BinaryDetector::is_binary(text),
+        !prunify::proxy::binary_detector::BinaryDetector::is_binary(text),
         "Valid printable ASCII text should NOT be detected as binary"
     );
 }
@@ -39,7 +39,7 @@ fn test_null_bytes_detected_as_binary() {
     data.extend_from_slice(b" and more text after");
 
     assert!(
-        prunifier::proxy::binary_detector::BinaryDetector::is_binary(&data),
+        prunify::proxy::binary_detector::BinaryDetector::is_binary(&data),
         "Data containing null bytes should be detected as binary regardless of printable content"
     );
 }

@@ -1,6 +1,6 @@
 use std::process::{Command, Stdio};
 
-use crate::error::PrunifierResult;
+use crate::error::PrunifyResult;
 use crate::proxy::signal_handler;
 
 /// Captured output from a proxied command.
@@ -21,9 +21,9 @@ impl CommandExecutor {
     /// The first element is the binary, the rest are passed as arguments directly —
     /// no splitting on whitespace, so quoted arguments are preserved.
     /// Command-not-found errors are returned as `Ok` with `exit_code: 127`.
-    pub fn execute(args: &[String]) -> PrunifierResult<ExecutionResult> {
+    pub fn execute(args: &[String]) -> PrunifyResult<ExecutionResult> {
         let binary = args.first().ok_or_else(|| {
-            crate::error::PrunifierError::CommandFailed("Empty command args".to_string(), -1)
+            crate::error::PrunifyError::CommandFailed("Empty command args".to_string(), -1)
         })?;
 
         let child = match Command::new(binary)

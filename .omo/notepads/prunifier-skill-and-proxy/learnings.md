@@ -48,24 +48,24 @@
 
 ## Task 15: Config Loader (completed 2026-06-04)
 
-- Created `src/config/loader.rs` with `ConfigLoader` struct and `load(path: Option<&Path>) -> PrunifierResult<PrunifierConfig>` method.
-- `load()` returns `PrunifierConfig::default()` when path is `None` or file doesn't exist (not an error).
-- Invalid YAML produces `PrunifierError::ConfigError` (via `serde_yaml::from_str` + `map_err`).
-- After deserialization, `load()` merges defaults: fields absent from YAML (`None`) are filled from `PrunifierConfig::default()`.
+- Created `src/config/loader.rs` with `ConfigLoader` struct and `load(path: Option<&Path>) -> PrunifyResult<PrunifyConfig>` method.
+- `load()` returns `PrunifyConfig::default()` when path is `None` or file doesn't exist (not an error).
+- Invalid YAML produces `PrunifyError::ConfigError` (via `serde_yaml::from_str` + `map_err`).
+- After deserialization, `load()` merges defaults: fields absent from YAML (`None`) are filled from `PrunifyConfig::default()`.
 - Updated `src/config/mod.rs` with `pub mod loader;` and `pub use loader::ConfigLoader;`.
-- Updated `src/lib.rs` to re-export `ConfigLoader` via `pub use config::{ConfigLoader, PrunifierConfig};`.
+- Updated `src/lib.rs` to re-export `ConfigLoader` via `pub use config::{ConfigLoader, PrunifyConfig};`.
 - Created `tests/config_loader_test.rs` with 4 integration tests (all pass):
   - `test_load_yaml_config` — fully-specified YAML, all 4 fields verified
   - `test_missing_config_uses_defaults` — non-existent path returns default
   - `test_invalid_yaml_errors` — malformed YAML yields `ConfigError`
   - `test_partial_config_merges_defaults` — only `verbose: true` set, absent fields filled from defaults
 - Test temp files created via `std::fs::File::create` + `write!` (no `tempfile` dependency needed).
-- `serde_yaml::from_str::<PrunifierConfig>()` for YAML parsing; `deny_unknown_fields` on `PrunifierConfig` handles unknown field rejection.
+- `serde_yaml::from_str::<PrunifyConfig>()` for YAML parsing; `deny_unknown_fields` on `PrunifyConfig` handles unknown field rejection.
 
-- Created `src/error.rs` with `PrunifierError` enum (8 variants) and `PrunifierResult<T>` type alias using `thiserror`.
-- `PrunifierError` uses `#[from]` for automatic conversion from `std::io::Error`, `serde_json::Error`, and `regex::Error`.
+- Created `src/error.rs` with `PrunifyError` enum (8 variants) and `PrunifyResult<T>` type alias using `thiserror`.
+- `PrunifyError` uses `#[from]` for automatic conversion from `std::io::Error`, `serde_json::Error`, and `regex::Error`.
 - Added `thiserror = "2"`, `serde_json = "1"`, `regex = "1"` to `Cargo.toml` dependencies.
-- Re-exported `PrunifierError` and `PrunifierResult` from `src/lib.rs`.
+- Re-exported `PrunifyError` and `PrunifyResult` from `src/lib.rs`.
 
 - Created `src/scheme/schema.json` — JSON Schema (draft-07) for the v1 line-based scheme format.
   - Validates: `command` (string, required), `version` (const 1), `rules` (array of objects).
@@ -75,36 +75,36 @@
 - Created `SCHEMA.md` — full specification with prose, field reference tables, and 3 worked examples (git status, ls -la, ps aux).
 
 - 2026-06-04: Test infrastructure set up (RED phase).
-  - Binary name is `prunifier` (package name), not `prunify`. References in test helpers and shell scripts use `./target/debug/prunifier`.
+  - Binary name is `prunify` (package name), not `prunify`. References in test helpers and shell scripts use `./target/debug/prunify`.
   - `tests/common/mod.rs` (not `common.rs`) required for `mod common;` in integration tests.
   - `test_scheme_validator_rejects_invalid_json` panics because binary exits 0 ("Hello, world!") instead of rejecting invalid JSON — correct TDD RED behavior.
 
 ## Task 14: Config Types (completed 2026-06-04)
 
-- Created `src/config/types.rs` with `PrunifierConfig` struct (4 fields: `scheme_dir`, `verbose`, `no_color`, `strict`), all `Option` typed, with `#[serde(deny_unknown_fields)]`.
-- Implemented `Default` for `PrunifierConfig`: `scheme_dir: None`, verbose/no_color/strict: `Some(false)`.
+- Created `src/config/types.rs` with `PrunifyConfig` struct (4 fields: `scheme_dir`, `verbose`, `no_color`, `strict`), all `Option` typed, with `#[serde(deny_unknown_fields)]`.
+- Implemented `Default` for `PrunifyConfig`: `scheme_dir: None`, verbose/no_color/strict: `Some(false)`.
 - Added `serde_yaml = "0.9"` to Cargo.toml.
-- Created `src/config/mod.rs` re-exporting `PrunifierConfig`.
-- Added `pub mod config;` and `pub use config::PrunifierConfig;` to `lib.rs`.
+- Created `src/config/mod.rs` re-exporting `PrunifyConfig`.
+- Added `pub mod config;` and `pub use config::PrunifyConfig;` to `lib.rs`.
 - 4 test cases pass: basic YAML deserialization, empty YAML `{}` (all fields None), unknown field rejection via `deny_unknown_fields`, and scheme_dir PathBuf resolution.
 
 ## Task 1: Project Scaffolding (completed 2026-06-04)
 
 ### Cargo.toml quirks
-- `cargo init --name prunifier` generated `edition = "2024"` and an empty `[dependencies]`
+- `cargo init --name prunify` generated `edition = "2024"` and an empty `[dependencies]`
 - When editing Cargo.toml, be careful not to introduce duplicate keys — the file already had some pre-populated dependencies (thiserror, serde_json, regex) which caused duplicate key errors
 - Overwriting via edit with oldString/newString for the full [dependencies] block resolved the duplicate issue
 
 ### Directory structure decisions
 - Kept pre-existing files untouched: SCHEMA.md, src/error.rs, src/scheme/schema.json, tests/shell_tests.sh
-- Created new dirs: src/scheme/, src/config/, src/engine/, src/proxy/, tests/, tests/common/, .prunifier/schemes/, .omo/evidence/
-- Binary name stays `prunifier` for now (will add `[[bin]] name = "prunify"` later)
+- Created new dirs: src/scheme/, src/config/, src/engine/, src/proxy/, tests/, tests/common/, .prunify/schemes/, .omo/evidence/
+- Binary name stays `prunify` for now (will add `[[bin]] name = "prunify"` later)
 - Library is at src/lib.rs (currently just a placeholder comment)
 - Pre-existing test helpers in tests/common/mod.rs reference `./target/debug/prunify` binary — that binary doesn't exist yet, so tests will fail at TDD RED phase
 
 ### Build verification
 - `cargo build`: successful (32 crates compiled)
-- `cargo run`: output "prunifier v0.1.0" as expected
+- `cargo run`: output "prunify v0.1.0" as expected
 - `cargo test`: 1 test fails (expected RED — references prunify binary not yet built)
 
 ## Task 6: Scheme Storage module (completed 2026-06-04)
@@ -163,7 +163,7 @@
 - Pre-existing `line_parser.rs` and `line_parser_test.rs` had import issues (`crate::scheme::types` should be `crate::scheme`) — not part of this task
 
 ### Interesting discovery
-- `src/engine/` directory already contained a `line_parser.rs` from a prior task, but the module wasn't registered in `mod.rs` (which didn't exist). The test file `tests/line_parser_test.rs` references `prunifier::engine::line_parser::LineParser` — unrelated pre-existing work.
+- `src/engine/` directory already contained a `line_parser.rs` from a prior task, but the module wasn't registered in `mod.rs` (which didn't exist). The test file `tests/line_parser_test.rs` references `prunify::engine::line_parser::LineParser` — unrelated pre-existing work.
 
 ## Task 17: Line Parser (completed 2026-06-04)
 
@@ -194,11 +194,11 @@
 ## Task 18: Command Executor (completed 2026-06-04)
 
 ### Files created/changed
-- `src/proxy/executor.rs` — `CommandExecutor` struct with `execute(command: &str) -> PrunifierResult<ExecutionResult>`:
+- `src/proxy/executor.rs` — `CommandExecutor` struct with `execute(command: &str) -> PrunifyResult<ExecutionResult>`:
   - Splits command string on whitespace via `split_whitespace()` into binary + args
   - Captures stdout/stderr via `Stdio::piped()`, exit code via `output.status.code().unwrap_or(-1)`
   - Command not found (`io::ErrorKind::NotFound`) → returns `Ok` with `exit_code: 127` (not Err)
-  - Empty command string → returns `Err(PrunifierError::CommandFailed)`
+  - Empty command string → returns `Err(PrunifyError::CommandFailed)`
   - Output preserved as-is (no trailing newline stripping/adding)
 - `src/proxy/mod.rs` — added `pub mod executor;` + re-export of `CommandExecutor` and `ExecutionResult`
 - `src/lib.rs` — added `pub mod proxy;` (already existed from TTY task, no change needed)
@@ -213,7 +213,7 @@
 ### Key decisions
 - `CommandExecutor` is a stateless struct (no fields) — follows `SchemeStorage` pattern
 - `ExecutionResult` is a simple struct (not a Result type) since both success and failure outcomes are represented via `exit_code`
-- Commands that produce non-zero exit codes are NOT errors at the `PrunifierResult` level — the exit code is just data in `ExecutionResult`
+- Commands that produce non-zero exit codes are NOT errors at the `PrunifyResult` level — the exit code is just data in `ExecutionResult`
 - `CommandFailed` error variant is reserved for infrastructure failures (empty command, I/O errors other than NotFound)
 - Tests use only commands available via PATH that work without shell quoting (`echo`, `false`, `ls`, `printf`) since `split_whitespace()` doesn't handle shell quoting
 
@@ -246,7 +246,7 @@
 ### Files created/changed
 - `src/proxy/recursion_guard.rs` — `RecursionGuard` struct with `is_recursive(command: &str) -> bool`:
   - Extracts first token via `command.split_whitespace().next()`
-  - Checks direct match against `"prunify"` and `"prunifier"` literals
+  - Checks direct match against `"prunify"` and `"prunify"` literals
   - Extracts file stem from first token (handles paths like `./target/debug/prunify`)
   - Also checks against `std::env::current_exe()` file stem (handles renamed binaries)
   - Returns `false` for empty/whitespace-only strings
@@ -254,7 +254,7 @@
 - `src/lib.rs` — added `pub mod proxy;`
 - `tests/recursion_test.rs` — 4 integration tests (all pass):
   - `test_detect_self_invocation` — bare `prunify`, with args
-  - `test_detect_nested_prunify` — `prunifier` (debug binary name)
+  - `test_detect_nested_prunify` — `prunify` (debug binary name)
   - `test_normal_command_not_detected` — `ls`, `echo`, `git`, empty/whitespace
   - `test_different_path_prunify` — path-based first token vs arguments containing "prunify"
 

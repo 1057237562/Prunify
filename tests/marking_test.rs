@@ -1,5 +1,5 @@
-use prunifier::proxy::DispatchMode;
-use prunifier::proxy::marking::OutputMarker;
+use prunify::proxy::DispatchMode;
+use prunify::proxy::marking::OutputMarker;
 
 #[test]
 fn test_exact_match_returns_output_unchanged() {

@@ -1,5 +1,5 @@
-use prunifier::engine::ColumnSelector;
-use prunifier::scheme::{Action, MatchCondition, Rule};
+use prunify::engine::ColumnSelector;
+use prunify::scheme::{Action, MatchCondition, Rule};
 
 #[test]
 fn test_keep_specific_columns() {

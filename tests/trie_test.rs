@@ -1,4 +1,4 @@
-use prunifier::engine::CommandTrie;
+use prunify::engine::CommandTrie;
 
 #[test]
 fn test_insert_and_exact_match() {

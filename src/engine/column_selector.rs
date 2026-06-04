@@ -1,4 +1,4 @@
-use crate::error::PrunifierResult;
+use crate::error::PrunifyResult;
 use crate::scheme::{Action, MatchCondition, Rule};
 
 pub struct ColumnSelector;
@@ -17,7 +17,7 @@ impl ColumnSelector {
     ///    shifted) index.
     ///
     /// Non-Column rules (Regex, LineNumber) are skipped entirely.
-    pub fn apply_rules(output: &str, rules: &[Rule]) -> PrunifierResult<String> {
+    pub fn apply_rules(output: &str, rules: &[Rule]) -> PrunifyResult<String> {
         let mut result_lines: Vec<String> = Vec::new();
 
         let keep_indices: Vec<usize> = rules

@@ -1,4 +1,4 @@
-use prunifier::scheme::{Action, MatchCondition, Scheme};
+use prunify::scheme::{Action, MatchCondition, Scheme};
 
 #[test]
 fn test_deserialize_valid_scheme() {

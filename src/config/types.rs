@@ -1,14 +1,14 @@
 use serde::Deserialize;
 use std::path::PathBuf;
 
-/// Top-level configuration for prunifier, deserialized from `.prunifier.yaml`.
+/// Top-level configuration for prunify, deserialized from `.prunify.yaml`.
 ///
 /// All fields are `Option` so we can distinguish "not present in the file"
 /// from "explicitly set to the default value".
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct PrunifierConfig {
-    /// Custom path to scheme files. Default: ".prunifier/schemes/"
+pub struct PrunifyConfig {
+    /// Custom path to scheme files. Default: ".prunify/schemes/"
     pub scheme_dir: Option<PathBuf>,
 
     /// Enable verbose logging
@@ -21,7 +21,7 @@ pub struct PrunifierConfig {
     pub strict: Option<bool>,
 }
 
-impl Default for PrunifierConfig {
+impl Default for PrunifyConfig {
     fn default() -> Self {
         Self {
             scheme_dir: None,

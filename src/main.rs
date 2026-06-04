@@ -3,17 +3,17 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use prunifier::cli::Cli;
-use prunifier::config::{ConfigLoader, PrunifierConfig};
-use prunifier::engine::CommandTrie;
-use prunifier::error::PrunifierResult;
-use prunifier::proxy::{
+use prunify::cli::Cli;
+use prunify::config::{ConfigLoader, PrunifyConfig};
+use prunify::engine::CommandTrie;
+use prunify::error::PrunifyResult;
+use prunify::proxy::{
     CommandExecutor, DispatchMode, Dispatcher, OutputMarker, RecursionGuard, TtyDetector,
     register_handler,
 };
-use prunifier::scheme::SchemeLoader;
+use prunify::scheme::SchemeLoader;
 
-fn main() -> PrunifierResult<()> {
+fn main() -> PrunifyResult<()> {
     // Register signal handler for SIGINT forwarding to child processes.
     // This must be called before any child process is spawned.
     register_handler();
@@ -25,13 +25,13 @@ fn main() -> PrunifierResult<()> {
 
     // Handle empty command (shouldn't happen with clap required=true, but safeguard)
     if command.trim().is_empty() {
-        eprintln!("prunifier: empty command — nothing to proxy");
+        eprintln!("prunify: empty command — nothing to proxy");
         std::process::exit(1);
     }
 
     // 1. Recursion guard
     if RecursionGuard::is_recursive(&command) {
-        eprintln!("prunifier: recursion detected — bypassing proxy");
+        eprintln!("prunify: recursion detected — bypassing proxy");
         return Ok(());
     }
 
@@ -45,7 +45,7 @@ fn main() -> PrunifierResult<()> {
     }
 
     // 3. Load config
-    let config_path = std::path::Path::new(".prunifier.yaml");
+    let config_path = std::path::Path::new(".prunify.yaml");
     let config = ConfigLoader::load(if config_path.exists() {
         Some(config_path)
     } else {
@@ -54,7 +54,7 @@ fn main() -> PrunifierResult<()> {
 
     // Merge CLI overrides onto config (if any CLI flag was provided)
     let config = if cli.scheme_dir.is_some() || cli.verbose || cli.strict {
-        PrunifierConfig {
+        PrunifyConfig {
             scheme_dir: cli.scheme_dir.map(PathBuf::from),
             verbose: if cli.verbose {
                 Some(true)
@@ -73,15 +73,41 @@ fn main() -> PrunifierResult<()> {
     };
 
     // 4. Load schemes
-    let default_dir = std::path::PathBuf::from(".prunifier/schemes/");
-    let loader = SchemeLoader::new(default_dir);
+    let default_dir = std::path::PathBuf::from(".prunify/schemes/");
+    let loader = SchemeLoader::new(default_dir.clone());
     let schemes = loader.load(&config)?;
 
-    // 5. Populate trie
-    let mut trie = CommandTrie::new();
-    for cmd in schemes.keys() {
-        trie.insert(cmd, cmd);
-    }
+    // 5. Populate trie (cached to .prunify/trie.json for fast startup)
+    let project_dir: PathBuf = config
+        .scheme_dir
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(".prunify/schemes/"));
+    let trie_path = PathBuf::from(".prunify/trie.json");
+    let rebuild_trie = cli.rebuild_trie
+        || CommandTrie::is_trie_stale(&trie_path, &[&default_dir, &project_dir]);
+
+    let trie = if rebuild_trie {
+        let mut t = CommandTrie::new();
+        for cmd in schemes.keys() {
+            t.insert(cmd, cmd);
+        }
+        if let Err(e) = t.save_to_file(&trie_path) {
+            eprintln!("prunify: warning: failed to cache trie: {e}");
+        }
+        t
+    } else {
+        match CommandTrie::load_from_file(&trie_path) {
+            Ok(t) => t,
+            Err(_e) => {
+                // Corrupted or missing cache — rebuild from schemes
+                let mut t = CommandTrie::new();
+                for cmd in schemes.keys() {
+                    t.insert(cmd, cmd);
+                }
+                t
+            }
+        }
+    };
 
     // 6. Execute command — pass raw args directly, no join/split round-trip
     let result = CommandExecutor::execute(&cli.command)?;

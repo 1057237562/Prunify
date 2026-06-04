@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use prunifier::config::PrunifierConfig;
-use prunifier::scheme::loader::SchemeLoader;
-use prunifier::scheme::{Action, Scheme};
+use prunify::config::PrunifyConfig;
+use prunify::scheme::loader::SchemeLoader;
+use prunify::scheme::{Action, Scheme};
 
 const FIXTURES_DIR: &str = "tests/fixtures/scheme_loader";
 
@@ -18,8 +18,8 @@ fn test_load_defaults() {
     let loader = SchemeLoader::new(default_dir);
 
     // Explicitly set scheme_dir to an absent dir so we don't accidentally
-    // load real schemes from .prunifier/schemes/.
-    let mut config = PrunifierConfig::default();
+    // load real schemes from .prunify/schemes/.
+    let mut config = PrunifyConfig::default();
     config.scheme_dir = Some(absent_dir());
 
     let schemes: HashMap<String, Scheme> = loader.load(&config).expect("should load defaults");
@@ -45,7 +45,7 @@ fn test_project_override_replaces_default() {
     let project_dir = PathBuf::from(FIXTURES_DIR).join("overrides");
     let loader = SchemeLoader::new(default_dir);
 
-    let mut config = PrunifierConfig::default();
+    let mut config = PrunifyConfig::default();
     config.scheme_dir = Some(project_dir);
 
     let schemes: HashMap<String, Scheme> =
@@ -72,7 +72,7 @@ fn test_no_project_config_uses_defaults() {
     let loader = SchemeLoader::new(default_dir);
 
     // Set scheme_dir to absent dir to isolate from real project schemes
-    let mut config = PrunifierConfig::default();
+    let mut config = PrunifyConfig::default();
     config.scheme_dir = Some(absent_dir());
 
     let schemes: HashMap<String, Scheme> = loader.load(&config).expect("should load defaults only");
@@ -87,7 +87,7 @@ fn test_empty_scheme_dir() {
     let default_dir = PathBuf::from(FIXTURES_DIR).join("nonexistent");
     let loader = SchemeLoader::new(default_dir);
 
-    let mut config = PrunifierConfig::default();
+    let mut config = PrunifyConfig::default();
     config.scheme_dir = Some(absent_dir());
 
     let schemes: HashMap<String, Scheme> =

@@ -1,4 +1,4 @@
-use prunifier::proxy::TtyDetector;
+use prunify::proxy::TtyDetector;
 
 #[test]
 fn test_detect_tty_stdout() {

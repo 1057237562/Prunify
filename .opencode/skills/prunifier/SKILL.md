@@ -1,15 +1,15 @@
 ---
-name: prunifier
+name: prunify
 description: Proxy bash commands through prunify to prune verbose output using JSON schemes
 triggers:
   - prunify
-  - prunifier
+  - prunify
   - prune output
   - trim output
   - prune command
 ---
 
-# Prunifier
+# Prunify
 
 Proxy and prune bash command output using JSON schemes.
 
@@ -17,11 +17,11 @@ Proxy and prune bash command output using JSON schemes.
 
 ```bash
 cargo build --release
-cp target/release/prunifier ~/.local/bin/prunify   # or any PATH directory
+cp target/release/prunify ~/.local/bin/prunify   # or any PATH directory
 ```
 
-The binary is built as `prunifier` from the Cargo package. Copy or rename it
-to `prunify` for the intended command name. You can also use `prunifier`
+The binary is built as `prunify` from the Cargo package. Copy or rename it
+to `prunify` for the intended command name. You can also use `prunify`
 directly.
 
 ## Invocation
@@ -35,10 +35,11 @@ prunify --scheme-dir ./custom-schemes --no-mark git status
 
 | Flag | Description |
 |------|-------------|
-| `--scheme-dir <path>` | Custom directory for scheme JSON files (default: `.prunifier/schemes/`) |
+| `--scheme-dir <path>` | Custom directory for scheme JSON files (default: `.prunify/schemes/`) |
 | `--verbose` | Enable verbose logging |
 | `--no-mark` | Disable `[PRUNED]` and `[UNKNOWN COMMAND]` marks in output |
 | `--strict` | Reject unknown commands with an error instead of passthrough |
+| `--rebuild-trie` | Force rebuild of the command trie cache (ignores `.prunify/trie.json`) |
 
 Arguments after all flags are treated as the command to proxy. The command is
 executed as-is through the shell, its output captured and pruned.
@@ -70,7 +71,7 @@ passthrough.
 The command matches a known scheme exactly (token-for-token through the trie).
 Output is pruned silently. No marks are appended.
 
-Example: `prunify ls -la` when `.prunifier/schemes/ls-la.json` contains
+Example: `prunify ls -la` when `.prunify/schemes/ls-la.json` contains
 `"command": "ls -la"`.
 
 ### 2. Prefix Match
@@ -92,15 +93,14 @@ more specific scheme.
 #### Workflow: Optimizing a Prefix Match
 
 1. **Run raw**: Execute the command without prunify to see the full output
-2. **Analyze**: Compare pruned vs raw output. What useful info was lost? What
-   noise remained?
+2. **Audit**: Classify every line using [Pruning Strategy](#pruning-strategy) below
 3. **Design**: Create an optimized scheme JSON for the specific flags
 4. **Choose subagent**: Delegate scheme creation to a subagent:
    - `explore` -- good for analyzing output patterns and finding noise
    - `librarian` -- good when researching command output formats
    - `deep` -- good for complex scheme design with multiple rules
 5. **Write**: Save the optimized scheme to
-   `.prunifier/schemes/<command-slug>.json`
+   `.prunify/schemes/<command-slug>.json`
 6. **Verify**: Run `prunify <command>` again. The `[PRUNED]` mark should
    disappear (exact match now)
 
@@ -127,7 +127,7 @@ uses spaces. Every line is discarded, producing empty output. The `[PRUNED]`
 mark alerts you, and the workflow above guides creation of a scheme tailored
 for `git status --short`.
 
-### 3. Passthrough
+### 3. Passthrough / Unknown Command
 
 No matching scheme exists for the command. Raw output is passed through
 unmodified. A `[UNKNOWN COMMAND]` mark is appended:
@@ -142,55 +142,214 @@ command output and generate a new scheme.
 #### Workflow: Creating a Scheme for an Unknown Command
 
 1. **Run raw**: Execute the command without prunify to capture the full output
-2. **Identify noise**: Which lines or columns are irrelevant? Headers? Metadata?
-   Status lines?
-3. **Design rules**: Combine `discard` (remove known noise) and `keep`
-   (retain only relevant lines) rules
+2. **Audit**: Classify every line using [Pruning Strategy](#pruning-strategy) below
+3. **Design rules**: Combine `discard` (remove known noise) and optionally
+   `keep` (retain only relevant lines) rules
 4. **Choose subagent**: Same as prefix match workflow
-5. **Write**: Save to `.prunifier/schemes/<command-slug>.json`
+5. **Write**: Save to `.prunify/schemes/<command-slug>.json`
 6. **Verify**: Run `prunify <command>` again. The `[UNKNOWN COMMAND]` mark
    should disappear (exact match now)
 
+## Pruning Strategy
+
+A good scheme removes 80-95% of output while keeping every line that matters.
+Achieve this by systematically classifying each line type and discarding
+aggressively.
+
+### Output Auditing Method
+
+Before writing rules, run the raw command and answer for every line:
+
+| Category | Example | Verdict |
+|----------|---------|---------|
+| **Structural whitespace** | Blank lines, separator lines | Discard |
+| **Redundant metadata** | `running N tests` (count is in summary), header banners | Discard |
+| **Green/passing status** | `test ... ok`, `PASS`, `SUCCESS` — lines that just say "everything worked" | Discard |
+| **Repetitive per-item lines** | File lists in `git status`, process list in `ps aux` | Evaluate — maybe discard if summary exists |
+| **Build/progress lines** | `Finished ...`, `Compiling ...`, progress bars | Discard |
+| **Compiler warnings** | `warning: ...` and associated source markup (`-->`, `\|`, `= note:`) | Discard (go to stderr, prune for safety) |
+| **Result summaries** | `test result: ok. N passed...`, `N files changed` | **Keep** |
+| **Failure/error lines** | `FAILED`, `error:`, `Error:`, exception traces | **Keep** |
+| **Headers with useful context** | `Running unittests src/lib.rs` | **Keep** (but discard if redundant) |
+| **Data rows** | File entries in `ls -la`, process rows in `ps aux` | **Keep** (unless column-pruned) |
+
+### Three Noise Levels
+
+Start with Level 3 and work backward until the output is useful:
+
+1. **Conservative** — discard only obvious noise (warnings, blank lines, build progress). ~20-40% reduction.
+2. **Moderate** — also discard redundant headers and per-item status lines that duplicate a summary. ~50-70% reduction.
+3. **Aggressive** — discard passing/OK status lines entirely, keep only failures and the final rollup. ~80-95% reduction.
+
+**Default recommendation**: Level 3 (Aggressive). The `[UNKNOWN COMMAND]` or `[PRUNED]` mark already tells the user pruning happened. If they need more detail, they can run raw.
+
+### Rule Design Principles
+
+1. **Prefer `discard` over `keep`**: Discard removes specific noise while keeping everything else. Keep drops everything that doesn't match — one missed pattern means data loss. Only use `keep` when you are certain about exactly which lines are signal (e.g., column selection after discard).
+
+2. **Discard the most specific patterns first**: Order rules from most specific to most general. Specific patterns (like `^warning:`) won't accidentally catch signal. General patterns (like `\s*$`) go later.
+
+3. **Anchor patterns**: Use `^` and `$` anchors to avoid matching inside unexpected lines. `^warning:` is safe; `warning` alone might match a test name.
+
+4. **Cover all noise types in one pass**: Run the raw output through `| grep -c` to count lines per pattern. If 90% of lines are `... ok`, and the summary already has the count, discard the `... ok` lines.
+
+5. **Preserve failure context**: Never discard lines containing `FAILED`, `Error`, `error:`, `panic`, `traceback`, or `exception`. When tests fail, those lines are the entire point of the output.
+
+### Counting Lines to Set Targets
+
+Use shell commands to measure noise before writing rules:
+
+```bash
+# Count total lines
+cargo test 2>/dev/null | wc -l
+
+# Count lines of each type
+echo "blank:   $(cargo test 2>/dev/null | grep -c '^\s*$')"
+echo "running: $(cargo test 2>/dev/null | grep -c '^running [0-9]')"
+echo "... ok:  $(cargo test 2>/dev/null | grep -c '\.\.\. ok$')"
+echo "FAILED:  $(cargo test 2>/dev/null | grep -c 'FAILED')"
+echo "summary: $(cargo test 2>/dev/null | grep -c '^test result:')"
+```
+
+When the sum of noise lines > 80% of total, aggressive pruning is justified.
+
 ## Scheme Format
 
-Schemes are JSON documents stored in `.prunifier/schemes/`. Each scheme
+Schemes are JSON documents stored in `.prunify/schemes/`. Each scheme
 targets one command and contains an ordered list of rules.
 
 ```json
 {
-  "command": "ls -la",
+  "command": "cargo test",
   "version": 1,
   "rules": [
     {
       "action": "discard",
       "match_condition": {
         "type": "Regex",
-        "pattern": "^total\\s"
+        "pattern": "^\\s*$"
       },
-      "description": "Discard the 'total N' block count line"
+      "description": "Discard blank lines between test sections"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\.\\.\\. ok$"
+      },
+      "description": "Discard passing test lines — only FAILED tests matter"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^running \\d+ tests?$"
+      },
+      "description": "Discard running-N-tests headers — count is in the summary"
     }
   ]
 }
 ```
 
-Three match condition types are available in v1:
+**File naming**: `.prunify/schemes/<command-slug>.json` — replace spaces with dashes
+(e.g., `cargo test` → `cargo-test.json`, `git status --short` → `git-status-short.json`).
 
-- **Regex** -- match lines by regular expression
-- **Column** -- match a whitespace-split column by index and pattern
-- **LineNumber** -- match specific 1-based line numbers
+**Field reference**:
 
-Each rule has an `action` of `"keep"` (drop non-matching lines) or `"discard"`
-(drop matching lines). Rules are applied sequentially.
+| Field | Required | Description |
+|-------|----------|-------------|
+| `command` | Yes | Exact command string (e.g., `"cargo test"`) |
+| `version` | Yes | Must be `1` (only v1 exists) |
+| `rules` | Yes | Array of rule objects, applied in order |
+| `rules[].action` | Yes | `"discard"` (drop matching) or `"keep"` (drop non-matching) |
+| `rules[].match_condition` | Yes | Match specification (see below) |
+| `rules[].description` | No | Human-readable explanation of what this rule does |
+
+**Match condition types**:
+
+| Type | Fields | Description |
+|------|--------|-------------|
+| `Regex` | `pattern` | Match lines by regular expression |
+| `Column` | `index`, `pattern` | Match a whitespace-split column by index and pattern |
+| `LineNumber` | `lines` | Match specific 1-based line numbers |
+
+**Rule application**: Rules fire sequentially. Each rule's output is the next
+rule's input. `discard` removes matching lines; `keep` removes NON-matching
+lines.
 
 See [SCHEMA.md](../../SCHEMA.md) for the full specification, validation
-requirements, and worked examples (git status, ls -la, ps aux).
+requirements, and worked column-selector examples.
+
+## Worked Examples
+
+### `cargo test` — Aggressive Pruning
+
+**Raw output**: 200 lines. All tests pass.
+
+**Audit**:
+
+| Line type | Count | Verdict |
+|-----------|-------|---------|
+| Blank lines | 60 | Discard (structural whitespace) |
+| `running N tests` | 19 | Discard (redundant — count is in summary) |
+| `test ... ok` | 100 | Discard (passing status — every test passed, individual lines are noise) |
+| `test result:` | 20 | **Keep** (the essential summary) |
+| `FAILED` | 0 | **Keep** (critical when present; lines without `... ok` suffix survive) |
+
+**Target**: 200 lines → ~20 lines (90% reduction).
+
+**Scheme** (at `.prunify/schemes/cargo-test.json`):
+
+```json
+{
+  "command": "cargo test",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s*$"
+      },
+      "description": "Discard blank and whitespace-only lines between test sections"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^running \\d+ tests?$"
+      },
+      "description": "Discard 'running N tests' headers — counts are already in the test result summary"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "\\.\\.\\. ok$"
+      },
+      "description": "Discard lines for passing tests — only FAILED tests and the summary are relevant"
+    }
+  ]
+}
+```
+
+**Result** (all tests pass):
+```
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 4 passed; 0 failed; ...
+test result: ok. 8 passed; 0 failed; ...
+...
+```
+
+**When tests fail**, lines containing `FAILED`, the `failures:` header, failure
+details, and compilation errors survive — none match the discard patterns.
 
 ## Configuration
 
-Create a `.prunifier.yaml` file in the project root to override defaults:
+Create a `.prunify.yaml` file in the project root to override defaults:
 
 ```yaml
-# Custom scheme directory (default: .prunifier/schemes/)
+# Custom scheme directory (default: .prunify/schemes/)
 scheme_dir: ./my-schemes
 
 # Enable verbose logging (default: false)
@@ -205,6 +364,40 @@ strict: true
 
 All four fields are optional. Omitted fields use their default values.
 
+## Command Trie Cache
+
+Prunify builds a **command trie** from all loaded schemes to efficiently
+match commands. To avoid rebuilding this trie on every invocation, it is
+cached to `.prunify/trie.json` after the first run.
+
+### Auto-Invalidation
+
+The cache is **automatically invalidated** when any scheme file changes.
+Prunify compares the modification timestamps of all `.json` files in
+`.prunify/schemes/` against the cached trie. If any scheme is newer, the
+trie is rebuilt.
+
+### Forced Rebuild
+
+If you need to force a rebuild (e.g., after manually editing a scheme file
+without changing its timestamp, or after switching branches):
+
+```bash
+prunify --rebuild-trie <command>
+```
+
+This ignores the cached trie and rebuilds from the current scheme files.
+
+### How It Works
+
+1. On startup, prunify checks if `.prunify/trie.json` exists and is
+   newer than all scheme files.
+2. If fresh → load from cache (fast, no computation).
+3. If stale or missing → rebuild the trie from schemes and save it to
+   `.prunify/trie.json`.
+
+The trie file is JSON and can be inspected manually (`cat .prunify/trie.json`).
+
 ## Standalone Note
 
 The `prunify` binary works entirely standalone. You can use it without this
@@ -212,35 +405,46 @@ skill or OpenCode. The skill provides workflow guidance for scheme generation
 via subagents (e.g., detecting `[PRUNED]` or `[UNKNOWN COMMAND]` marks and
 spawning explore/librarian agents to create new schemes).
 
-## Mode 3: New Command Workflow
+## Decision Guide: When to Prune
 
-When prunify appends `[UNKNOWN COMMAND]` to stdout, no scheme exists for this command. A subagent should analyze the output and decide whether a scheme would improve agent efficiency.
+Not all commands need pruning. Apply the audit method and check:
 
-### Workflow
-1. **Review**: Examine the raw output — is there noise? Repetitive metadata? Long headers?
-2. **Decide**: Not all commands need pruning. Commands that produce minimal output (e.g., `echo`, `pwd`) don't need schemes. Focus on commands whose output changes frequently or is verbose.
-3. **Analyze**: If pruning would help, choose a subagent to analyze patterns:
-   - `explore` — good for identifying output sections and noise patterns
-   - `librarian` — good when the command has documented output formats to reference
-   - `deep` — good for complex multi-rule scheme design
-4. **Design**: The subagent drafts a scheme JSON with rules to remove noise and keep signal
-5. **Write**: Save to `.prunifier/schemes/<command-slug>.json` (replace spaces with dashes)
-6. **Test**: Run `prunify <command>` — verify output is usefully pruned without losing important info
-7. **Contribute** (optional): If the scheme is high-quality and the command is common, consider submitting it as a built-in scheme
+| Criterion | Prune? |
+|-----------|--------|
+| Output > 50 lines with > 60% noise | ✅ Yes, aggressive |
+| Output 10-50 lines with obvious noise (warnings, headers) | ✅ Yes, moderate |
+| Output < 10 lines and always consistent | ❌ No (e.g., `pwd`, `whoami`, `date`) |
+| Output is critical and should never be filtered | ❌ No (e.g., `kill`, `rm`, `mv`) |
+| Output varies too much for fixed patterns | ❌ No (e.g., `find` with different predicates) |
 
-### Example: `docker ps`
-`docker ps` produces wide tabular output with many columns. Most of the time, only CONTAINER ID, IMAGE, and NAMES are relevant.
+## Workflows by Mode
 
-**Workflow**:
-1. Run `docker ps` raw → see 8+ columns, many irrelevant (CREATED, STATUS, PORTS for quick checks)
-2. Decide: YES, this would benefit from pruning
-3. Subagent analyzes column structure
-4. Draft scheme: `discard` header-less columns, `keep` only columns 0, 1, and 6 (CONTAINER ID, IMAGE, NAMES)
-5. Save to `.prunifier/schemes/docker-ps.json`
-6. Verify: `prunify docker ps` → compact 3-column output
+### Mode 2 (Prefix Match) — Optimizing a Partial Match
 
-### Note
-Not all commands need pruning. Skip scheme creation for commands that:
-- Always produce minimal output (pwd, whoami, date)
-- Produce critical output that should never be filtered (kill, rm without -f)
-- Have output that varies too much to capture with a fixed scheme
+When `[PRUNED]` appears, the existing scheme is close but not exact:
+
+1. **Run raw**: Execute the command without prunify to see the full output
+2. **Audit**: Use the [Pruning Strategy](#pruning-strategy) to classify lines
+3. **Diff**: Compare raw vs pruned — what was lost? What noise survived?
+4. **Design**: Create a new scheme for the specific command (with all flags)
+5. **Choose subagent**: Delegate to `explore` (pattern analysis), `librarian`
+   (format research), or `deep` (complex multi-rule design)
+6. **Write**: Save to `.prunify/schemes/<command-slug>.json`
+7. **Verify**: `[PRUNED]` mark should disappear; target ≥80% reduction
+
+### Mode 3 (Passthrough) — Creating a New Scheme
+
+When `[UNKNOWN COMMAND]` appears, no scheme exists:
+
+1. **Run raw**: Capture the full output
+2. **Decide**: Apply the [Decision Guide](#decision-guide-when-to-prune) —
+   not every command needs a scheme
+3. **Audit**: Classify every line type with the [Pruning Strategy](#pruning-strategy)
+4. **Count**: Measure noise percentage. If > 60%, pruning is justified
+5. **Design**: Write discard rules for each noise category, starting with
+   the most aggressive level and relaxing only if useful info is lost
+6. **Write**: Save to `.prunify/schemes/<command-slug>.json`
+7. **Verify**: `[UNKNOWN COMMAND]` mark disappears. Run with `--no-mark` to
+   check the clean output, then without to confirm the signal is complete
+8. **Contribute** (optional): High-quality schemes for common commands can
+   be promoted to built-in schemes

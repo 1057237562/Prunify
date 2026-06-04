@@ -1,4 +1,4 @@
-use prunifier::PrunifierConfig;
+use prunify::PrunifyConfig;
 use std::path::PathBuf;
 
 /// Deserialize a basic YAML with scheme_dir and verify all fields.
@@ -11,7 +11,7 @@ no_color: false
 strict: true
 "#;
 
-    let config: PrunifierConfig =
+    let config: PrunifyConfig =
         serde_yaml::from_str(yaml).expect("valid YAML should deserialize");
 
     assert_eq!(config.scheme_dir, Some(PathBuf::from("./my-schemes")));
@@ -26,7 +26,7 @@ strict: true
 fn test_empty_yaml_uses_defaults() {
     let yaml = "{}";
 
-    let config: PrunifierConfig =
+    let config: PrunifyConfig =
         serde_yaml::from_str(yaml).expect("empty YAML should deserialize");
 
     // All fields are Option; absent from YAML → None
@@ -44,7 +44,7 @@ scheme_dir: ./my-schemes
 unknown_field: something
 "#;
 
-    let result: Result<PrunifierConfig, _> = serde_yaml::from_str(yaml);
+    let result: Result<PrunifyConfig, _> = serde_yaml::from_str(yaml);
     assert!(
         result.is_err(),
         "expected unknown field to cause a deserialization error, got {:?}",
@@ -62,21 +62,21 @@ unknown_field: something
 #[test]
 fn test_scheme_dir_path() {
     let yaml = r#"
-scheme_dir: /etc/prunifier/schemes
+scheme_dir: /etc/prunify/schemes
 "#;
 
-    let config: PrunifierConfig =
+    let config: PrunifyConfig =
         serde_yaml::from_str(yaml).expect("valid YAML should deserialize");
 
     let path = config.scheme_dir.expect("scheme_dir should be Some");
     assert!(path.is_absolute(), "expected absolute path, got: {path:?}");
-    assert_eq!(path, PathBuf::from("/etc/prunifier/schemes"));
+    assert_eq!(path, PathBuf::from("/etc/prunify/schemes"));
 
     // Also test a relative path
     let yaml_rel = r#"
 scheme_dir: ./custom/schemes
 "#;
-    let config_rel: PrunifierConfig =
+    let config_rel: PrunifyConfig =
         serde_yaml::from_str(yaml_rel).expect("relative path YAML should deserialize");
     let rel_path = config_rel.scheme_dir.expect("scheme_dir should be Some");
     assert!(

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::error::PrunifierResult;
+use crate::error::PrunifyResult;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -11,10 +11,10 @@ pub struct Scheme {
 }
 
 impl Scheme {
-    pub fn validate(&self) -> PrunifierResult<()> {
+    pub fn validate(&self) -> PrunifyResult<()> {
         // Version must be exactly 1
         if self.version != 1 {
-            return Err(crate::error::PrunifierError::InvalidScheme(format!(
+            return Err(crate::error::PrunifyError::InvalidScheme(format!(
                 "version must be 1, got {}",
                 self.version
             )));
@@ -22,7 +22,7 @@ impl Scheme {
 
         // At least one rule is required
         if self.rules.is_empty() {
-            return Err(crate::error::PrunifierError::InvalidScheme(
+            return Err(crate::error::PrunifyError::InvalidScheme(
                 "scheme must have at least one rule".to_string(),
             ));
         }
@@ -32,7 +32,7 @@ impl Scheme {
             match &rule.match_condition {
                 MatchCondition::Regex { pattern } | MatchCondition::Column { pattern, .. } => {
                     regex::Regex::new(pattern).map_err(|e| {
-                        crate::error::PrunifierError::InvalidScheme(format!(
+                        crate::error::PrunifyError::InvalidScheme(format!(
                             "invalid regex pattern '{}': {}",
                             pattern, e
                         ))

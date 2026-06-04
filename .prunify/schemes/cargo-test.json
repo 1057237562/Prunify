@@ -1,0 +1,54 @@
+{
+  "command": "cargo test",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s*$"
+      },
+      "description": "Discard blank and whitespace-only lines between test sections"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^running \\d+ tests?$"
+      },
+      "description": "Discard 'running N tests' headers \u2014 counts are already in the test result summary"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "\\.\\.\\. ok$"
+      },
+      "description": "Discard lines for passing tests \u2014 only FAILED tests and the summary are relevant"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^warning:"
+      },
+      "description": "Discard compiler warning headers (cargo sends these to stderr but handle stdout too)"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{4}Finished "
+      },
+      "description": "Discard build finished line"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{3}= note:\\s.*(dead_code|unused|warnings|generated)"
+      },
+      "description": "Discard compiler notes about build warnings"
+    }
+  ]
+}

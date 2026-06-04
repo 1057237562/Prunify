@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::engine::column_selector::ColumnSelector;
 use crate::engine::line_parser::LineParser;
 use crate::engine::trie::CommandTrie;
-use crate::error::PrunifierResult;
+use crate::error::PrunifyResult;
 use crate::scheme::Scheme;
 
 /// The dispatch mode determined by the trie matcher.
@@ -41,7 +41,7 @@ impl Dispatcher {
         &self,
         command: &str,
         raw_output: &str,
-    ) -> PrunifierResult<(String, DispatchMode)> {
+    ) -> PrunifyResult<(String, DispatchMode)> {
         // Mode 1: Try exact match first
         if let Some(scheme_id) = self.trie.search_exact(command)
             && let Some(scheme) = self.schemes.get(scheme_id)
@@ -64,7 +64,7 @@ impl Dispatcher {
 
     /// Apply scheme rules in order: LineParser first (line filtering),
     /// then ColumnSelector (column pruning).
-    fn apply_scheme(&self, output: &str, scheme: &Scheme) -> PrunifierResult<String> {
+    fn apply_scheme(&self, output: &str, scheme: &Scheme) -> PrunifyResult<String> {
         let pruned = LineParser::apply_rules(output, &scheme.rules)?;
         let pruned = ColumnSelector::apply_rules(&pruned, &scheme.rules)?;
         Ok(pruned)

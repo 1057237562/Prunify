@@ -1,13 +1,13 @@
 use std::path::Path;
 
-use crate::error::PrunifierResult;
+use crate::error::PrunifyResult;
 use crate::scheme::types::Scheme;
 
 pub struct SchemeStorage;
 
 impl SchemeStorage {
     /// Load a single scheme from a JSON file path
-    pub fn load(path: &Path) -> PrunifierResult<Scheme> {
+    pub fn load(path: &Path) -> PrunifyResult<Scheme> {
         let content = std::fs::read_to_string(path)?;
         let scheme: Scheme = serde_json::from_str(&content)?;
         scheme.validate()?;
@@ -15,7 +15,7 @@ impl SchemeStorage {
     }
 
     /// Load all .json scheme files from a directory (non-recursive)
-    pub fn load_all(dir: &Path) -> PrunifierResult<Vec<Scheme>> {
+    pub fn load_all(dir: &Path) -> PrunifyResult<Vec<Scheme>> {
         let mut schemes = Vec::new();
         if !dir.exists() {
             return Ok(schemes);
@@ -34,7 +34,7 @@ impl SchemeStorage {
     }
 
     /// Validate a scheme file without loading it
-    pub fn validate_scheme_file(path: &Path) -> PrunifierResult<()> {
+    pub fn validate_scheme_file(path: &Path) -> PrunifyResult<()> {
         Self::load(path)?;
         Ok(())
     }

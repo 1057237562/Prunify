@@ -1,5 +1,5 @@
-use prunifier::engine::line_parser::LineParser;
-use prunifier::scheme::{Action, MatchCondition, Rule};
+use prunify::engine::line_parser::LineParser;
+use prunify::scheme::{Action, MatchCondition, Rule};
 
 #[test]
 fn test_keep_lines_matching_regex() {

@@ -1,4 +1,4 @@
-use prunifier::engine::AnsiStripper;
+use prunify::engine::AnsiStripper;
 
 #[test]
 fn test_strip_colored_ls_output() {

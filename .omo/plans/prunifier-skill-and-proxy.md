@@ -1,4 +1,4 @@
-# Prunifier — Skill + Rust Proxy for Bash Output Pruning
+# Prunify — Skill + Rust Proxy for Bash Output Pruning
 
 ## TL;DR
 
@@ -6,10 +6,10 @@
 > 
 > **Deliverables**:
 > - Rust binary: `prunify` — CLI wrapper that proxies commands, applies pruning schemes, handles TTY/exit codes/recursion
-> - JSON scheme system: Schema specification, 3 built-in schemes (git status, ls -la, ps aux), `.prunifier/schemes/` storage
+> - JSON scheme system: Schema specification, 3 built-in schemes (git status, ls -la, ps aux), `.prunify/schemes/` storage
 > - Trie-based command matcher: Exact + prefix matching across full argument vectors
 > - OpenCode skill: `SKILL.md` with workflow instructions for subagent-driven scheme generation
-> - `.prunifier.yaml` config: Per-project overrides for schemes and settings
+> - `.prunify.yaml` config: Per-project overrides for schemes and settings
 > - Test suite: TDD with Rust unit tests + shell integration tests
 > 
 > **Estimated Effort**: Large
@@ -27,8 +27,8 @@ Build a skill (using skill creator) and a Rust executable that proxies bash comm
 **Key Discussions**:
 - **AST Scheme Format**: JSON schema with line-based selectors for v1 — parse output by line, apply regex/column-based keep/discard rules. Tree-based AST parsing deferred to v2+ (Metis recommendation: generic AST for arbitrary CLI output is a research project, not v1 scope).
 - **Proxy Invocation**: Explicit CLI wrapper — `prunify <CMD>` (not a shell hook).
-- **Pruning Authority**: Hybrid — universal defaults shipped with binary + per-project `.prunifier.yaml` overrides. Project override = complete replacement of default scheme (not deep merge).
-- **Storage**: `.prunifier/schemes/` dotfile directory — 1 JSON file per command.
+- **Pruning Authority**: Hybrid — universal defaults shipped with binary + per-project `.prunify.yaml` overrides. Project override = complete replacement of default scheme (not deep merge).
+- **Storage**: `.prunify/schemes/` dotfile directory — 1 JSON file per command.
 - **Command Scope**: Universal proxy — all commands accepted, unknown ones fall to mode 3 (passthrough).
 - **Trie Matching**: Longest common prefix across full argument vector (e.g., `git status -s` shares prefix with `git status`).
 - **Communication**: `[PRUNED]` mark in output for modes 2 and 3; skill reads output to detect need for subagent analysis.
@@ -51,7 +51,7 @@ Build a skill (using skill creator) and a Rust executable that proxies bash comm
 ## Work Objectives
 
 ### Core Objective
-Prunifier is a Rust CLI proxy (`prunify <CMD>`) that prunes verbose bash output using line-based selectors (v1) guided by per-command JSON schemes, paired with an OpenCode skill that documents workflows for scheme generation via subagents.
+Prunify is a Rust CLI proxy (`prunify <CMD>`) that prunes verbose bash output using line-based selectors (v1) guided by per-command JSON schemes, paired with an OpenCode skill that documents workflows for scheme generation via subagents.
 
 ### Concrete Deliverables
 - `Cargo.toml` + `src/main.rs` — Rust binary built with clap, anyhow, regex, trie-rs (or similar)
@@ -59,12 +59,12 @@ Prunifier is a Rust CLI proxy (`prunify <CMD>`) that prunes verbose bash output 
 - `src/trie_matcher.rs` — Trie data structure for command prefix matching
 - `src/proxy.rs` — Command execution, output capture, pruning, TTY detection
 - `src/modes.rs` — Three-mode dispatch logic
-- `.prunifier/schemes/git-status.json` — Built-in scheme for git status
-- `.prunifier/schemes/ls-la.json` — Built-in scheme for ls -la
-- `.prunifier/schemes/ps-aux.json` — Built-in scheme for ps aux
-- `.opencode/skills/prunifier/SKILL.md` — OpenCode skill workflow documentation
+- `.prunify/schemes/git-status.json` — Built-in scheme for git status
+- `.prunify/schemes/ls-la.json` — Built-in scheme for ls -la
+- `.prunify/schemes/ps-aux.json` — Built-in scheme for ps aux
+- `.opencode/skills/prunify/SKILL.md` — OpenCode skill workflow documentation
 - `tests/` — Rust unit tests + integration shell tests
-- `.prunifier.yaml` — Config schema specification
+- `.prunify.yaml` — Config schema specification
 
 ### Definition of Done
 - [ ] `cargo build --release` succeeds with zero warnings
@@ -75,7 +75,7 @@ Prunifier is a Rust CLI proxy (`prunify <CMD>`) that prunes verbose bash output 
 - [ ] `prunify some-new-command` → raw output passthrough
 - [ ] `prunify prunify echo hello` → recursion detected, bypassed
 - [ ] `prunify ls /nonexistent` → exit code 2 propagated
-- [ ] OpenCode skill: `SKILL.md` exists at `.opencode/skills/prunifier/SKILL.md`
+- [ ] OpenCode skill: `SKILL.md` exists at `.opencode/skills/prunify/SKILL.md`
 
 ### Must Have
 - Line-based output pruning via JSON schemes (regex + column selectors)
@@ -85,8 +85,8 @@ Prunifier is a Rust CLI proxy (`prunify <CMD>`) that prunes verbose bash output 
 - Exit code propagation from proxied command
 - Recursion guard (detect `prunify prunify` — first token of proxied command is "prunify")
 - 3 built-in schemes (git status, ls -la, ps aux)
-- `.prunifier/schemes/` dotfile storage with per-project override
-- `.prunifier.yaml` config file support
+- `.prunify/schemes/` dotfile storage with per-project override
+- `.prunify.yaml` config file support
 - OpenCode skill (SKILL.md) with subagent workflow instructions
 - TDD with Rust unit tests and shell integration tests
 - Agent-executed QA scenarios for every task
@@ -138,7 +138,7 @@ Wave 1 (Start Immediately — Foundation + Schema):
 ├── Task 3: Test infrastructure setup (cargo test harness + shell test framework) [quick]
 ├── Task 4: Error type definitions (anyhow + custom error enum) [quick]
 ├── Task 5: Scheme data types (Rust structs + serde) [quick]
-├── Task 6: Config types (.prunifier.yaml schema types) [quick]
+├── Task 6: Config types (.prunify.yaml schema types) [quick]
 └── Task 7: Scheme storage module (read/write/validate scheme files) [quick]
 
 Wave 2 (After Wave 1 — Core Engine, MAX PARALLEL):
@@ -149,7 +149,7 @@ Wave 2 (After Wave 1 — Core Engine, MAX PARALLEL):
 ├── Task 12: Built-in schemes: git-status [quick]
 ├── Task 13: Built-in schemes: ls-la [quick]
 ├── Task 14: Built-in schemes: ps-aux [quick]
-└── Task 15: Config loader (.prunifier.yaml reader) [quick]
+└── Task 15: Config loader (.prunify.yaml reader) [quick]
 
 Wave 3 (After Wave 2 — Proxy Engine + Integration):
 ├── Task 16: Command executor (std::process::Command + output capture + exit code) [deep]
@@ -224,16 +224,16 @@ Max Concurrent: 8 (Wave 2)
 - [x] 1. Project scaffolding + Cargo init
 
   **What to do**:
-  - Run `cargo init --name prunifier` in workspace root
+  - Run `cargo init --name prunify` in workspace root
   - Add dependencies to `Cargo.toml`: `clap = { version = "4", features = ["derive"] }`, `anyhow = "1"`, `serde = { version = "1", features = ["derive"] }`, `serde_json = "1"`, `regex = "1"`, `thiserror = "2"`
   - Set up directory structure: `src/`, `src/scheme/`, `src/config/`, `src/engine/`, `src/proxy/`, `tests/`
-  - Create `.prunifier/schemes/` directory with `.gitkeep`
-  - Add `src/main.rs` with minimal `fn main() { println!("prunifier v0.1.0"); }`
+  - Create `.prunify/schemes/` directory with `.gitkeep`
+  - Add `src/main.rs` with minimal `fn main() { println!("prunify v0.1.0"); }`
   - Add `src/lib.rs` (library root for testability)
 
   **Must NOT do**:
   - Do NOT add any dependency beyond the 6 listed (clap, anyhow, serde, serde_json, regex, thiserror)
-  - Do NOT create `.prunifier.yaml` default file yet (that's Task 6)
+  - Do NOT create `.prunify.yaml` default file yet (that's Task 6)
 
   **Recommended Agent Profile**:
   - **Category**: `quick`
@@ -254,9 +254,9 @@ Max Concurrent: 8 (Wave 2)
   - Official docs: `https://docs.rs/serde/latest/serde/derive.Deserialize.html` — Serde derive for JSON parsing
 
   **Acceptance Criteria**:
-  - [ ] `cargo build` succeeds (produces `target/debug/prunifier` binary)
-  - [ ] `cargo run` outputs "prunifier v0.1.0"
-  - [ ] `ls .prunifier/schemes/` shows `.gitkeep`
+  - [ ] `cargo build` succeeds (produces `target/debug/prunify` binary)
+  - [ ] `cargo run` outputs "prunify v0.1.0"
+  - [ ] `ls .prunify/schemes/` shows `.gitkeep`
   - [ ] All 6 dependencies present in `Cargo.toml` under `[dependencies]`
 
   **QA Scenarios**:
@@ -269,7 +269,7 @@ Max Concurrent: 8 (Wave 2)
       1. Run: cargo build 2>&1
       2. Assert: exit code is 0
       3. Assert: stderr does NOT contain "error" (case insensitive)
-      4. Assert: target/debug/prunifier binary exists
+      4. Assert: target/debug/prunify binary exists
     Expected Result: Binary compiles with zero errors
     Failure Indicators: Build fails, error messages in output
     Evidence: .omo/evidence/task-1-build-success.txt
@@ -279,7 +279,7 @@ Max Concurrent: 8 (Wave 2)
     Preconditions: cargo build succeeded
     Steps:
       1. Run: cargo run 2>&1
-      2. Assert: stdout contains "prunifier v0.1.0"
+      2. Assert: stdout contains "prunify v0.1.0"
     Expected Result: Version string printed to stdout
     Failure Indicators: Wrong output, crash on startup
     Evidence: .omo/evidence/task-1-version-output.txt
@@ -290,8 +290,8 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-1-version-output.txt` — cargo run output
 
   **Commit**: YES (groups with Tasks 2-7 in Wave 1)
-  - Message: `feat(prunifier): project scaffolding and cargo init`
-  - Files: `Cargo.toml`, `Cargo.lock`, `src/main.rs`, `src/lib.rs`, `.prunifier/schemes/.gitkeep`
+  - Message: `feat(prunify): project scaffolding and cargo init`
+  - Files: `Cargo.toml`, `Cargo.lock`, `src/main.rs`, `src/lib.rs`, `.prunify/schemes/.gitkeep`
   - Pre-commit: `cargo build`
 
 - [x] 2. JSON scheme schema specification
@@ -368,7 +368,7 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-2-schema-docs.txt` — grep results from SCHEMA.md
 
   **Commit**: YES (Wave 1 group)
-  - Message: `feat(prunifier): JSON scheme schema specification`
+  - Message: `feat(prunify): JSON scheme schema specification`
   - Files: `SCHEMA.md`, `src/scheme/schema.json`
   - Pre-commit: `python3 -c "import json; json.load(open('src/scheme/schema.json'))"`
 
@@ -438,18 +438,18 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-3-shell-exec.txt` — permission check result
 
   **Commit**: YES (Wave 1 group)
-  - Message: `test(prunifier): test infrastructure setup with TDD skeleton`
+  - Message: `test(prunify): test infrastructure setup with TDD skeleton`
   - Files: `tests/integration_test.rs`, `tests/shell_tests.sh`, `tests/common/mod.rs`
   - Pre-commit: `cargo test 2>&1 | head -20`
 
 - [x] 4. Error type definitions
 
   **What to do**:
-  - Create `src/error.rs` with `PrunifierError` enum using `thiserror`
+  - Create `src/error.rs` with `PrunifyError` enum using `thiserror`
   - Variants: `SchemeNotFound(String)`, `InvalidScheme(String)`, `CommandFailed(String, i32)`, `IoError(#[from] std::io::Error)`, `JsonError(#[from] serde_json::Error)`, `RegexError(#[from] regex::Error)`, `ConfigError(String)`, `RecursionDetected`
   - Implement `std::fmt::Display` via `thiserror` derive
-  - Add type alias `pub type PrunifierResult<T> = Result<T, PrunifierError>`
-  - Re-export from `src/lib.rs`: `pub mod error; pub use error::{PrunifierError, PrunifierResult};`
+  - Add type alias `pub type PrunifyResult<T> = Result<T, PrunifyError>`
+  - Re-export from `src/lib.rs`: `pub mod error; pub use error::{PrunifyError, PrunifyResult};`
 
   **Must NOT do**:
   - Do NOT add any variant not listed above
@@ -472,8 +472,8 @@ Max Concurrent: 8 (Wave 2)
 
   **Acceptance Criteria**:
   - [ ] `cargo check` passes (no compilation errors)
-  - [ ] `PrunifierError` has exactly 8 variants as listed
-  - [ ] `PrunifierResult<T>` type alias compiles
+  - [ ] `PrunifyError` has exactly 8 variants as listed
+  - [ ] `PrunifyResult<T>` type alias compiles
   - [ ] Error types re-exported from `src/lib.rs`
 
   **QA Scenarios**:
@@ -485,7 +485,7 @@ Max Concurrent: 8 (Wave 2)
     Steps:
       1. Run: cargo check 2>&1
       2. Assert: exit code is 0
-      3. Run: cargo doc --no-deps -p prunifier 2>&1
+      3. Run: cargo doc --no-deps -p prunify 2>&1
       4. Assert: exit code is 0 (docs generate without errors)
     Expected Result: Error types compile cleanly
     Failure Indicators: Compilation errors, missing derives
@@ -496,7 +496,7 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-4-error-compile.txt` — cargo check output
 
   **Commit**: YES (Wave 1 group)
-  - Message: `feat(prunifier): error type definitions with thiserror`
+  - Message: `feat(prunify): error type definitions with thiserror`
   - Files: `src/error.rs`, `src/lib.rs`
   - Pre-commit: `cargo check`
 
@@ -570,18 +570,18 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-5-scheme-rejection-test.txt` — cargo test output for invalid scheme
 
   **Commit**: YES (Wave 1 group)
-  - Message: `feat(prunifier): scheme data types with serde deserialization`
+  - Message: `feat(prunify): scheme data types with serde deserialization`
   - Files: `src/scheme/types.rs`, `src/scheme/mod.rs`, `tests/scheme_types_test.rs`
   - Pre-commit: `cargo test tests::scheme_types_test`
 
-- [x] 6. Config types (.prunifier.yaml schema types)
+- [x] 6. Config types (.prunify.yaml schema types)
 
   **What to do**:
-  - Create `src/config/types.rs` with `PrunifierConfig` struct
-  - Fields: `scheme_dir: Option<PathBuf>` (default: `.prunifier/schemes/`), `verbose: Option<bool>`, `no_color: Option<bool>`, `strict: Option<bool>` (reject unknown commands instead of passthrough)
+  - Create `src/config/types.rs` with `PrunifyConfig` struct
+  - Fields: `scheme_dir: Option<PathBuf>` (default: `.prunify/schemes/`), `verbose: Option<bool>`, `no_color: Option<bool>`, `strict: Option<bool>` (reject unknown commands instead of passthrough)
   - Implement `serde::Deserialize` with `#[serde(default)]` for optional fields
-  - Implement `Default` for `PrunifierConfig` with sensible defaults
-  - Add `PrunifierConfig::load()` placeholder (returns default — real loading in Task 15)
+  - Implement `Default` for `PrunifyConfig` with sensible defaults
+  - Add `PrunifyConfig::load()` placeholder (returns default — real loading in Task 15)
   - Create `tests/config_types_test.rs`: test deserialize minimal yaml, test defaults, test invalid field ignored
   - Add `serde_yaml = "0.9"` to Cargo.toml
 
@@ -603,13 +603,13 @@ Max Concurrent: 8 (Wave 2)
 
   **References**:
   - Official docs: `https://docs.rs/serde_yaml/latest/serde_yaml/` — serde_yaml usage
-  - Pattern: `.prunifier.yaml` — top-level YAML config file in project root
+  - Pattern: `.prunify.yaml` — top-level YAML config file in project root
 
   **Acceptance Criteria**:
   - [ ] `cargo test tests::config_types_test` → all tests PASS
   - [ ] YAML `scheme_dir: ./custom-schemes` deserializes correctly
   - [ ] Empty YAML `{}` uses all defaults
-  - [ ] `PrunifierConfig::default().scheme_dir` is `None` (meaning use built-in default)
+  - [ ] `PrunifyConfig::default().scheme_dir` is `None` (meaning use built-in default)
 
   **QA Scenarios**:
 
@@ -629,7 +629,7 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-6-config-types-test.txt` — cargo test output
 
   **Commit**: YES (Wave 1 group)
-  - Message: `feat(prunifier): config types for .prunifier.yaml`
+  - Message: `feat(prunify): config types for .prunify.yaml`
   - Files: `src/config/types.rs`, `src/config/mod.rs`, `tests/config_types_test.rs`, `Cargo.toml`
   - Pre-commit: `cargo test config_types_test`
 
@@ -638,15 +638,15 @@ Max Concurrent: 8 (Wave 2)
   **What to do** (TDD):
   - **RED**: Write `tests/scheme_storage_test.rs` with tests for: `test_load_valid_scheme()`, `test_load_missing_file()`, `test_load_invalid_json()`, `test_load_scheme_wrong_version()`
   - **GREEN**: Create `src/scheme/storage.rs` with `SchemeStorage` struct
-  - Methods: `load(path: &Path) -> PrunifierResult<Scheme>`, `load_all(dir: &Path) -> PrunifierResult<Vec<Scheme>>`, `validate_scheme_file(path: &Path) -> PrunifierResult<()>`
+  - Methods: `load(path: &Path) -> PrunifyResult<Scheme>`, `load_all(dir: &Path) -> PrunifyResult<Vec<Scheme>>`, `validate_scheme_file(path: &Path) -> PrunifyResult<()>`
   - `load_all`: reads all `.json` files from directory, skips non-JSON files, collects valid schemes
   - `validate_scheme_file`: checks file exists, is valid JSON, conforms to scheme schema
   - Error on: file not found → `SchemeNotFound`, invalid JSON → `InvalidScheme`, wrong version → `InvalidScheme`
   - Add test fixture: `tests/fixtures/valid-scheme.json`, `tests/fixtures/invalid-schema.json`, `tests/fixtures/empty-dir/`
 
   **Must NOT do**:
-  - Do NOT scan recursively into subdirectories (flat `.prunifier/schemes/` only)
-  - Do NOT implement `.prunifier.yaml` reading (that's Task 15)
+  - Do NOT scan recursively into subdirectories (flat `.prunify/schemes/` only)
+  - Do NOT implement `.prunify.yaml` reading (that's Task 15)
 
   **Recommended Agent Profile**:
   - **Category**: `quick`
@@ -701,7 +701,7 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-7-storage-missing-test.txt` — missing file test output
 
   **Commit**: YES (Wave 1 group)
-  - Message: `feat(prunifier): scheme storage module with file loading`
+  - Message: `feat(prunify): scheme storage module with file loading`
   - Files: `src/scheme/storage.rs`, `tests/scheme_storage_test.rs`, `tests/fixtures/valid-scheme.json`, `tests/fixtures/invalid-schema.json`
   - Pre-commit: `cargo test scheme_storage_test`
 
@@ -774,7 +774,7 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-8-trie-prefix-test.txt` — prefix match test output
 
   **Commit**: YES (Wave 2 group)
-  - Message: `feat(prunifier): trie matcher for command prefix matching`
+  - Message: `feat(prunify): trie matcher for command prefix matching`
   - Files: `src/engine/trie.rs`, `src/engine/mod.rs`, `tests/trie_test.rs`
   - Pre-commit: `cargo test trie_test`
 
@@ -783,7 +783,7 @@ Max Concurrent: 8 (Wave 2)
   **What to do** (TDD):
   - **RED**: Write `tests/line_parser_test.rs`: `test_keep_lines_matching_regex()`, `test_discard_lines_matching_regex()`, `test_multiple_rules_apply_in_order()`, `test_empty_output()`, `test_no_matching_rules_keeps_all()`
   - **GREEN**: Create `src/engine/line_parser.rs` with `LineParser` struct
-  - `apply_rules(output: &str, rules: &[Rule]) -> PrunifierResult<String>` — split by newline, apply each rule in order, return pruned string
+  - `apply_rules(output: &str, rules: &[Rule]) -> PrunifyResult<String>` — split by newline, apply each rule in order, return pruned string
   - Rule application: for `Action::Keep`, drop lines that DON'T match; for `Action::Discard`, drop lines that DO match
   - Handle empty lines (preserve unless explicitly discarded)
   - Preserve trailing newline behavior of original output
@@ -846,7 +846,7 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-9-line-parser-chain.txt` — chained rules test output
 
   **Commit**: YES (Wave 2 group)
-  - Message: `feat(prunifier): line parser with regex-based pruning rules`
+  - Message: `feat(prunify): line parser with regex-based pruning rules`
   - Files: `src/engine/line_parser.rs`, `tests/line_parser_test.rs`
   - Pre-commit: `cargo test line_parser_test`
 
@@ -855,7 +855,7 @@ Max Concurrent: 8 (Wave 2)
   **What to do** (TDD):
   - **RED**: Write `tests/column_selector_test.rs`: `test_keep_specific_columns()`, `test_discard_specific_columns()`, `test_whitespace_separator()`, `test_variable_column_count()`, `test_column_index_out_of_bounds()`
   - **GREEN**: Create `src/engine/column_selector.rs` with `ColumnSelector` struct
-  - `apply_rules(output: &str, rules: &[Rule]) -> PrunifierResult<String>` — for each line, split by separator, apply column-based keep/discard
+  - `apply_rules(output: &str, rules: &[Rule]) -> PrunifyResult<String>` — for each line, split by separator, apply column-based keep/discard
   - Default separator: whitespace (one or more spaces/tabs)
   - For `Action::Keep` with `Column` condition: keep only specified column
   - For `Action::Discard` with `Column` condition: remove specified column, rejoin remaining
@@ -918,7 +918,7 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-10-column-oob.txt` — out-of-bounds test output
 
   **Commit**: YES (Wave 2 group)
-  - Message: `feat(prunifier): column selector for tabular output pruning`
+  - Message: `feat(prunify): column selector for tabular output pruning`
   - Files: `src/engine/column_selector.rs`, `tests/column_selector_test.rs`
   - Pre-commit: `cargo test column_selector_test`
 
@@ -928,7 +928,7 @@ Max Concurrent: 8 (Wave 2)
   - **RED**: Write `tests/scheme_loader_test.rs`: `test_load_defaults()`, `test_project_override_replaces_default()`, `test_no_project_config_uses_defaults()`, `test_empty_scheme_dir()`
   - **GREEN**: Create `src/scheme/loader.rs` with `SchemeLoader` struct
   - `new(default_dir: PathBuf) -> Self` — sets default schemes directory
-  - `load(config: &PrunifierConfig) -> PrunifierResult<HashMap<String, Scheme>>` — loads all schemes
+  - `load(config: &PrunifyConfig) -> PrunifyResult<HashMap<String, Scheme>>` — loads all schemes
   - Priority: project override (from `config.scheme_dir`) completely replaces default for same command
   - Return map keyed by command string (e.g., "git status", "ls -la")
   - Use `SchemeStorage::load_all()` from Task 7 for file reading
@@ -936,7 +936,7 @@ Max Concurrent: 8 (Wave 2)
 
   **Must NOT do**:
   - Do NOT deep merge project overrides with defaults (complete replacement per guardrail)
-  - Do NOT handle `.prunifier.yaml` reading here (use PrunifierConfig passed in)
+  - Do NOT handle `.prunify.yaml` reading here (use PrunifyConfig passed in)
 
   **Recommended Agent Profile**:
   - **Category**: `quick`
@@ -948,11 +948,11 @@ Max Concurrent: 8 (Wave 2)
   - **Can Run In Parallel**: YES
   - **Parallel Group**: Wave 2 (with Tasks 8-10, 12-15)
   - **Blocks**: Task 17 (dispatcher uses loaded schemes)
-  - **Blocked By**: Tasks 5, 7 (Scheme type + storage), Task 6 (PrunifierConfig type)
+  - **Blocked By**: Tasks 5, 7 (Scheme type + storage), Task 6 (PrunifyConfig type)
 
   **References**:
   - Pattern: `src/scheme/storage.rs:SchemeStorage` — Storage from Task 7
-  - Pattern: `src/config/types.rs:PrunifierConfig` — Config type from Task 6
+  - Pattern: `src/config/types.rs:PrunifyConfig` — Config type from Task 6
 
   **Acceptance Criteria** (if TDD):
   - [ ] `cargo test tests::scheme_loader_test` → all 4 tests PASS
@@ -989,14 +989,14 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-11-loader-defaults.txt` — defaults test output
 
   **Commit**: YES (Wave 2 group)
-  - Message: `feat(prunifier): scheme loader with default + override priority`
+  - Message: `feat(prunify): scheme loader with default + override priority`
   - Files: `src/scheme/loader.rs`, `tests/scheme_loader_test.rs`
   - Pre-commit: `cargo test scheme_loader_test`
 
 - [x] 12. Built-in scheme: git-status
 
   **What to do**:
-  - Create `.prunifier/schemes/git-status.json` with pruning rules for `git status` output
+  - Create `.prunify/schemes/git-status.json` with pruning rules for `git status` output
   - Parse `git status` output format: section headers ("On branch X", "Changes not staged", etc.), blank lines, file lists
   - Rules: discard "On branch" line, discard blank lines, discard "nothing to commit" messages, keep only file change lines (modified/deleted/renamed/untracked)
   - Add `description` field on each rule explaining what it does
@@ -1023,7 +1023,7 @@ Max Concurrent: 8 (Wave 2)
   - Spec: `SCHEMA.md` from Task 2 — scheme format specification
 
   **Acceptance Criteria**:
-  - [ ] `.prunifier/schemes/git-status.json` is valid JSON per `src/scheme/schema.json`
+  - [ ] `.prunify/schemes/git-status.json` is valid JSON per `src/scheme/schema.json`
   - [ ] Scheme has at least 3 rules (discard branch line, discard blank lines, keep file changes)
   - [ ] Sample `git status` output with 3 modified files → pruned output shows only the 3 file lines
   - [ ] Sample `git status` output with clean working tree → pruned output is empty (or single "clean" line)
@@ -1037,7 +1037,7 @@ Max Concurrent: 8 (Wave 2)
     Steps:
       1. Create test: echo -e "On branch main\n\nChanges not staged for commit:\n\tmodified: src/main.rs\n\tmodified: README.md" > /tmp/test-git-status.txt
       2. Run: (implementation test — verify scheme JSON is valid and rules match)
-      3. Run: python3 -c "import json; s=json.load(open('.prunifier/schemes/git-status.json')); assert len(s['rules'])>=3; print('OK')"
+      3. Run: python3 -c "import json; s=json.load(open('.prunify/schemes/git-status.json')); assert len(s['rules'])>=3; print('OK')"
       4. Assert: output is "OK"
     Expected Result: Scheme has at least 3 rules and is valid JSON
     Failure Indicators: Invalid JSON, fewer than 3 rules
@@ -1048,14 +1048,14 @@ Max Concurrent: 8 (Wave 2)
   - [ ] `task-12-git-status-scheme.txt` — scheme validation output
 
   **Commit**: YES (Wave 2 group)
-  - Message: `feat(prunifier): built-in scheme for git status`
-  - Files: `.prunifier/schemes/git-status.json`
-  - Pre-commit: `python3 -c "import json; json.load(open('.prunifier/schemes/git-status.json')); print('VALID')"`
+  - Message: `feat(prunify): built-in scheme for git status`
+  - Files: `.prunify/schemes/git-status.json`
+  - Pre-commit: `python3 -c "import json; json.load(open('.prunify/schemes/git-status.json')); print('VALID')"`
 
 - [x] 13. Built-in scheme: ls-la
 
   **What to do**:
-  - Create `.prunifier/schemes/ls-la.json` with pruning rules for `ls -la` output
+  - Create `.prunify/schemes/ls-la.json` with pruning rules for `ls -la` output
   - Parse `ls -la` output format: "total N" header line, then rows with columns (permissions, links, owner, group, size, date, time, name)
   - Rules: discard "total" line (regex `^total\s`), discard lines ending with ` .` or ` ..` (current/parent dir entries), keep everything else
   - Add `description` field on each rule
@@ -1082,7 +1082,7 @@ Max Concurrent: 8 (Wave 2)
   - Spec: `SCHEMA.md` from Task 2
 
   **Acceptance Criteria**:
-  - [ ] `.prunifier/schemes/ls-la.json` is valid JSON per schema
+  - [ ] `.prunify/schemes/ls-la.json` is valid JSON per schema
   - [ ] Scheme has at least 2 rules (discard total, discard . and ..)
   - [ ] Sample `ls -la` output with 5 files + . + .. → pruned output shows 5 files, no total line, no . or ..
 
@@ -1095,7 +1095,7 @@ Max Concurrent: 8 (Wave 2)
     Steps:
       1. Run: python3 -c "
 import json
-s=json.load(open('.prunifier/schemes/ls-la.json'))
+s=json.load(open('.prunify/schemes/ls-la.json'))
 rules = [r['action'] for r in s['rules']]
 assert 'discard' in rules, 'No discard rules'
 print(f'OK: {len(rules)} rules')
@@ -1110,14 +1110,14 @@ print(f'OK: {len(rules)} rules')
   - [ ] `task-13-ls-la-scheme.txt` — scheme validation output
 
   **Commit**: YES (Wave 2 group)
-  - Message: `feat(prunifier): built-in scheme for ls -la`
-  - Files: `.prunifier/schemes/ls-la.json`
-  - Pre-commit: `python3 -c "import json; json.load(open('.prunifier/schemes/ls-la.json')); print('VALID')"`
+  - Message: `feat(prunify): built-in scheme for ls -la`
+  - Files: `.prunify/schemes/ls-la.json`
+  - Pre-commit: `python3 -c "import json; json.load(open('.prunify/schemes/ls-la.json')); print('VALID')"`
 
 - [x] 14. Built-in scheme: ps-aux
 
   **What to do**:
-  - Create `.prunifier/schemes/ps-aux.json` with pruning rules for `ps aux` output
+  - Create `.prunify/schemes/ps-aux.json` with pruning rules for `ps aux` output
   - Parse `ps aux` output format: header row + columns (USER, PID, %CPU, %MEM, VSZ, RSS, TTY, STAT, START, TIME, COMMAND)
   - Rules: discard header row, keep only PID and COMMAND columns (using column selector from Task 10)
   - Use `Column` match condition with whitespace separator, keep columns at index 1 (PID) and 10 (COMMAND)
@@ -1145,7 +1145,7 @@ print(f'OK: {len(rules)} rules')
   - Pattern: Column 1 = PID, Column 10 = COMMAND (0-indexed)
 
   **Acceptance Criteria**:
-  - [ ] `.prunifier/schemes/ps-aux.json` is valid JSON per schema
+  - [ ] `.prunify/schemes/ps-aux.json` is valid JSON per schema
   - [ ] Scheme uses `Column` match condition type for PID and COMMAND
   - [ ] Scheme has a discard rule for the header row (line number 0 or regex)
 
@@ -1158,7 +1158,7 @@ print(f'OK: {len(rules)} rules')
     Steps:
       1. Run: python3 -c "
 import json
-s=json.load(open('.prunifier/schemes/ps-aux.json'))
+s=json.load(open('.prunify/schemes/ps-aux.json'))
 has_column = any(r.get('match_condition',{}).get('type')=='Column' for r in s['rules'])
 assert has_column, 'No column rules'
 print('OK: uses column selectors')
@@ -1173,23 +1173,23 @@ print('OK: uses column selectors')
   - [ ] `task-14-ps-aux-scheme.txt` — scheme validation output
 
   **Commit**: YES (Wave 2 group)
-  - Message: `feat(prunifier): built-in scheme for ps aux`
-  - Files: `.prunifier/schemes/ps-aux.json`
-  - Pre-commit: `python3 -c "import json; json.load(open('.prunifier/schemes/ps-aux.json')); print('VALID')"`
+  - Message: `feat(prunify): built-in scheme for ps aux`
+  - Files: `.prunify/schemes/ps-aux.json`
+  - Pre-commit: `python3 -c "import json; json.load(open('.prunify/schemes/ps-aux.json')); print('VALID')"`
 
-- [x] 15. Config loader (.prunifier.yaml reader)
+- [x] 15. Config loader (.prunify.yaml reader)
 
   **What to do** (TDD):
   - **RED**: Write `tests/config_loader_test.rs`: `test_load_yaml_config()`, `test_missing_config_uses_defaults()`, `test_invalid_yaml_errors()`, `test_partial_config_merges_defaults()`
   - **GREEN**: Create `src/config/loader.rs` with `ConfigLoader`
-  - `load(path: Option<&Path>) -> PrunifierResult<PrunifierConfig>` — load from given path or default location (project root `.prunifier.yaml`)
+  - `load(path: Option<&Path>) -> PrunifyResult<PrunifyConfig>` — load from given path or default location (project root `.prunify.yaml`)
   - Use `serde_yaml::from_str` for parsing
-  - On missing file: return `PrunifierConfig::default()` (not an error)
+  - On missing file: return `PrunifyConfig::default()` (not an error)
   - On invalid YAML: return `ConfigError` with parse error message
   - Validate config values: `scheme_dir` must be valid path if set, `verbose` must be true/false
 
   **Must NOT do**:
-  - Do NOT create a default `.prunifier.yaml` file — config is optional
+  - Do NOT create a default `.prunify.yaml` file — config is optional
   - Do NOT support nested config structures beyond the 4 fields defined
 
   **Recommended Agent Profile**:
@@ -1202,16 +1202,16 @@ print('OK: uses column selectors')
   - **Can Run In Parallel**: YES
   - **Parallel Group**: Wave 2 (with Tasks 8-14)
   - **Blocks**: Task 20 (CLI reads config)
-  - **Blocked By**: Task 6 (PrunifierConfig type)
+  - **Blocked By**: Task 6 (PrunifyConfig type)
 
   **References**:
   - Official docs: `https://docs.rs/serde_yaml/latest/serde_yaml/fn.from_str.html` — YAML parsing
-  - Pattern: `src/config/types.rs:PrunifierConfig` — Config type from Task 6
+  - Pattern: `src/config/types.rs:PrunifyConfig` — Config type from Task 6
 
   **Acceptance Criteria** (if TDD):
   - [ ] `cargo test tests::config_loader_test` → all 4 tests PASS
   - [ ] Loading valid YAML `scheme_dir: ./my-schemes` → config.scheme_dir = Some("./my-schemes")
-  - [ ] Missing `.prunifier.yaml` → returns default config (not error)
+  - [ ] Missing `.prunify.yaml` → returns default config (not error)
   - [ ] Invalid YAML (malformed) → returns ConfigError
 
   **QA Scenarios**:
@@ -1243,7 +1243,7 @@ print('OK: uses column selectors')
   - [ ] `task-15-config-load.txt` — load test output
 
   **Commit**: YES (Wave 2 group)
-  - Message: `feat(prunifier): config loader for .prunifier.yaml`
+  - Message: `feat(prunify): config loader for .prunify.yaml`
   - Files: `src/config/loader.rs`, `tests/config_loader_test.rs`
   - Pre-commit: `cargo test config_loader_test`
 
@@ -1252,7 +1252,7 @@ print('OK: uses column selectors')
   **What to do** (TDD):
   - **RED**: Write `tests/executor_test.rs`: `test_execute_simple_command()`, `test_capture_stdout()`, `test_capture_stderr()`, `test_exit_code_propagation()`, `test_command_not_found()`, `test_output_with_no_newline()`
   - **GREEN**: Create `src/proxy/executor.rs` with `CommandExecutor`
-  - `execute(command: &str) -> PrunifierResult<ExecutionResult>` where `ExecutionResult { stdout: String, stderr: String, exit_code: i32 }`
+  - `execute(command: &str) -> PrunifyResult<ExecutionResult>` where `ExecutionResult { stdout: String, stderr: String, exit_code: i32 }`
   - Parse command string into binary + args (split by whitespace, handle quoted strings)
   - Use `std::process::Command` to spawn, capture stdout and stderr separately
   - Propagate exit code on both success and failure (command fails → exit code is non-zero, but executor returns Ok with the exit code)
@@ -1281,7 +1281,7 @@ print('OK: uses column selectors')
   **References**:
   - Official docs: `https://doc.rust-lang.org/std/process/struct.Command.html` — std::process::Command
   - Official docs: `https://doc.rust-lang.org/std/process/struct.ExitStatus.html` — ExitStatus for code extraction
-  - Pattern: `src/error.rs:PrunifierError::CommandFailed` — Error type for command failures
+  - Pattern: `src/error.rs:PrunifyError::CommandFailed` — Error type for command failures
 
   **Acceptance Criteria** (if TDD):
   - [ ] `cargo test tests::executor_test` → all 6 tests PASS
@@ -1319,7 +1319,7 @@ print('OK: uses column selectors')
   - [ ] `task-16-executor-exit-code.txt` — exit code propagation test
 
   **Commit**: YES (Wave 3 group)
-  - Message: `feat(prunifier): command executor with output capture and exit codes`
+  - Message: `feat(prunify): command executor with output capture and exit codes`
   - Files: `src/proxy/executor.rs`, `src/proxy/mod.rs`, `tests/executor_test.rs`
   - Pre-commit: `cargo test executor_test`
 
@@ -1329,7 +1329,7 @@ print('OK: uses column selectors')
   - **RED**: Write `tests/dispatcher_test.rs`: `test_mode1_exact_match_prunes()`, `test_mode2_prefix_match_prunes_and_marks()`, `test_mode3_no_match_passthrough()`, `test_mode2_mark_includes_pruned_tag()`, `test_dispatcher_preserves_exit_code()`
   - **GREEN**: Create `src/proxy/dispatcher.rs` with `Dispatcher` struct
   - `new(trie: CommandTrie, schemes: HashMap<String, Scheme>) -> Self` — load from trie and scheme map
-  - `dispatch(command: &str, output: &str) -> PrunifierResult<(String, DispatchMode)>` where `DispatchMode` enum: `ExactMatch`, `PrefixMatch(usize)`, `Passthrough`
+  - `dispatch(command: &str, output: &str) -> PrunifyResult<(String, DispatchMode)>` where `DispatchMode` enum: `ExactMatch`, `PrefixMatch(usize)`, `Passthrough`
   - Mode 1 (ExactMatch): command exactly matches trie entry → apply scheme, return pruned output
   - Mode 2 (PrefixMatch): trie finds prefix match but not exact → apply closest scheme, prepend `[PRUNED] (prefix match: N tokens)` to output
   - Mode 3 (Passthrough): no trie match at all → return output unchanged, prepend `[UNKNOWN COMMAND]` mark
@@ -1405,7 +1405,7 @@ print('OK: uses column selectors')
   - [ ] `task-17-dispatcher-passthrough.txt` — mode 3 test
 
   **Commit**: YES (Wave 3 group)
-  - Message: `feat(prunifier): three-mode dispatcher with trie routing and pruning`
+  - Message: `feat(prunify): three-mode dispatcher with trie routing and pruning`
   - Files: `src/proxy/dispatcher.rs`, `tests/dispatcher_test.rs`
   - Pre-commit: `cargo test dispatcher_test`
 
@@ -1475,7 +1475,7 @@ print('OK: uses column selectors')
   - [ ] `task-18-tty-passthrough.txt` — passthrough test
 
   **Commit**: YES (Wave 3 group)
-  - Message: `feat(prunifier): TTY detector with interactive command passthrough`
+  - Message: `feat(prunify): TTY detector with interactive command passthrough`
   - Files: `src/proxy/tty.rs`, `tests/tty_test.rs`, `Cargo.toml` (add libc dep)
   - Pre-commit: `cargo test tty_test`
 
@@ -1544,7 +1544,7 @@ print('OK: uses column selectors')
   - [ ] `task-19-recursion-normal.txt` — false positive test
 
   **Commit**: YES (Wave 3 group)
-  - Message: `feat(prunifier): recursion guard for self-invocation detection`
+  - Message: `feat(prunify): recursion guard for self-invocation detection`
   - Files: `src/proxy/recursion_guard.rs`, `tests/recursion_test.rs`
   - Pre-commit: `cargo test recursion_test`
 
@@ -1584,7 +1584,7 @@ print('OK: uses column selectors')
   - [ ] `cargo test tests::cli_test` → all 4 tests PASS
   - [ ] `prunify --help` prints usage with all flags documented
   - [ ] `prunify echo hello` outputs "hello" with exit 0
-  - [ ] `prunify --version` prints "prunifier v0.1.0"
+  - [ ] `prunify --version` prints "prunify v0.1.0"
   - [ ] `prunify ls /nonexistent` exits with code 2
 
   **QA Scenarios**:
@@ -1632,7 +1632,7 @@ print('OK: uses column selectors')
   - [ ] `task-20-cli-exit-code.txt` — exit code test
 
   **Commit**: YES (Wave 3 group)
-  - Message: `feat(prunifier): CLI entry point with clap and full proxy pipeline`
+  - Message: `feat(prunify): CLI entry point with clap and full proxy pipeline`
   - Files: `src/cli.rs`, `src/main.rs`
   - Pre-commit: `cargo build && ./target/debug/prunify --help`
 
@@ -1704,7 +1704,7 @@ print('OK: uses column selectors')
   - [ ] `task-21-marking-exact.txt` — exact match no-mark test
 
   **Commit**: YES (Wave 3 group)
-  - Message: `feat(prunifier): output marking with [PRUNED] and [UNKNOWN COMMAND] tags`
+  - Message: `feat(prunify): output marking with [PRUNED] and [UNKNOWN COMMAND] tags`
   - Files: `src/proxy/marking.rs`, `tests/marking_test.rs`
   - Pre-commit: `cargo test marking_test`
 
@@ -1735,7 +1735,7 @@ print('OK: uses column selectors')
 
   **References**:
   - Pattern: `tests/shell_tests.sh` from Task 3 — existing shell test scaffold
-  - Pattern: `.prunifier/schemes/git-status.json` — Built-in scheme from Task 12
+  - Pattern: `.prunify/schemes/git-status.json` — Built-in scheme from Task 12
 
   **Acceptance Criteria**:
   - [ ] `./tests/shell_tests.sh` runs all 9 scenarios
@@ -1751,9 +1751,9 @@ print('OK: uses column selectors')
     Tool: Bash
     Preconditions: cargo build succeeded, schemes exist
     Steps:
-      1. cd /tmp && mkdir -p test-prunifier-git && cd test-prunifier-git
+      1. cd /tmp && mkdir -p test-prunify-git && cd test-prunify-git
       2. git init && touch file.txt
-      3. Run: /root/prunifier/target/debug/prunify git status 2>&1
+      3. Run: /root/prunify/target/debug/prunify git status 2>&1
       4. Assert: exit code is 0
       5. Assert: stdout does NOT contain "On branch" (pruned)
       6. Assert: stdout contains "file.txt" or "Untracked"
@@ -1765,7 +1765,7 @@ print('OK: uses column selectors')
     Tool: Bash
     Preconditions: cargo build succeeded
     Steps:
-      1. Run: /root/prunifier/target/debug/prunify sh -c "exit 42" 2>&1
+      1. Run: /root/prunify/target/debug/prunify sh -c "exit 42" 2>&1
       2. Capture: EXIT=$?
       3. Assert: EXIT is 42
     Expected Result: Exit code 42 propagated
@@ -1778,19 +1778,19 @@ print('OK: uses column selectors')
   - [ ] `task-22-integration-exit-code.txt` — exit code test
 
   **Commit**: YES (Wave 3 group)
-  - Message: `test(prunifier): end-to-end integration tests for all three modes`
+  - Message: `test(prunify): end-to-end integration tests for all three modes`
   - Files: `tests/shell_tests.sh`
   - Pre-commit: `bash tests/shell_tests.sh`
 
 - [x] 23. OpenCode skill: SKILL.md (skill metadata + basic workflow)
 
   **What to do**:
-  - Create `.opencode/skills/prunifier/SKILL.md` with YAML frontmatter + markdown body
-  - Frontmatter: `name: prunifier`, `description: Proxy bash commands through prunify to prune verbose output using AST schemes`, `triggers: prunify, prunifier, prune output, trim output`
-  - Document: what Prunifier is, how to install (`cargo build --release`, add to PATH), how to invoke (`prunify <CMD>`)
+  - Create `.opencode/skills/prunify/SKILL.md` with YAML frontmatter + markdown body
+  - Frontmatter: `name: prunify`, `description: Proxy bash commands through prunify to prune verbose output using AST schemes`, `triggers: prunify, prunify, prune output, trim output`
+  - Document: what Prunify is, how to install (`cargo build --release`, add to PATH), how to invoke (`prunify <CMD>`)
   - Document: the 3 modes and what each means
   - Document: scheme file format (with examples from SCHEMA.md)
-  - Document: `.prunifier.yaml` config options
+  - Document: `.prunify.yaml` config options
   - Document: how to create a new scheme (point to Tasks 24-25 for subagent workflows)
   - Add note: "The prunify binary works standalone without this skill. This skill provides workflow guidance."
 
@@ -1813,10 +1813,10 @@ print('OK: uses column selectors')
   **References**:
   - Pattern: `~/.cache/opencode/skills/security-research/SKILL.md` — OpenCode skill format (YAML frontmatter + markdown body)
   - Pattern: `SCHEMA.md` from Task 2 — scheme format reference
-  - Pattern: `.prunifier.yaml` config options from Tasks 6, 15
+  - Pattern: `.prunify.yaml` config options from Tasks 6, 15
 
   **Acceptance Criteria**:
-  - [ ] `.opencode/skills/prunifier/SKILL.md` exists with valid YAML frontmatter
+  - [ ] `.opencode/skills/prunify/SKILL.md` exists with valid YAML frontmatter
   - [ ] Frontmatter has `name`, `description`, `triggers` fields
   - [ ] Body documents: installation, invocation, 3 modes, scheme format, config
   - [ ] Body includes a note that binary works standalone
@@ -1827,9 +1827,9 @@ print('OK: uses column selectors')
   ```
   Scenario: Skill file has valid frontmatter
     Tool: Bash
-    Preconditions: .opencode/skills/prunifier/SKILL.md exists
+    Preconditions: .opencode/skills/prunify/SKILL.md exists
     Steps:
-      1. Run: head -10 .opencode/skills/prunifier/SKILL.md
+      1. Run: head -10 .opencode/skills/prunify/SKILL.md
       2. Assert: output contains "---" (YAML delimiter)
       3. Assert: output contains "name:"
       4. Assert: output contains "triggers:"
@@ -1841,9 +1841,9 @@ print('OK: uses column selectors')
     Tool: Bash
     Preconditions: SKILL.md exists
     Steps:
-      1. Run: grep -c "cargo build" .opencode/skills/prunifier/SKILL.md
+      1. Run: grep -c "cargo build" .opencode/skills/prunify/SKILL.md
       2. Assert: count >= 1
-      3. Run: grep -ci "install" .opencode/skills/prunifier/SKILL.md
+      3. Run: grep -ci "install" .opencode/skills/prunify/SKILL.md
       4. Assert: count >= 1
     Expected Result: Installation instructions present
     Failure Indicators: No installation docs
@@ -1855,20 +1855,20 @@ print('OK: uses column selectors')
   - [ ] `task-23-skill-install.txt` — installation docs check
 
   **Commit**: YES (Wave 4 group)
-  - Message: `docs(prunifier): OpenCode skill with workflow documentation`
-  - Files: `.opencode/skills/prunifier/SKILL.md`
-  - Pre-commit: `head -10 .opencode/skills/prunifier/SKILL.md | grep -q "name:"`
+  - Message: `docs(prunify): OpenCode skill with workflow documentation`
+  - Files: `.opencode/skills/prunify/SKILL.md`
+  - Pre-commit: `head -10 .opencode/skills/prunify/SKILL.md | grep -q "name:"`
 
 - [x] 24. OpenCode skill: Mode-2 workflow (prefix match → subagent optimization)
 
   **What to do**:
-  - Add a "Mode 2: Prefix Match Workflow" section to `.opencode/skills/prunifier/SKILL.md`
+  - Add a "Mode 2: Prefix Match Workflow" section to `.opencode/skills/prunify/SKILL.md`
   - Document the workflow: when agent sees `[PRUNED]` appended to stdout, it should:
     1. Run the command WITHOUT `prunify` to see the full raw output
     2. Analyze the full output to identify what's signal vs noise
     3. Compare with the applied (prefix-matched) scheme's pruning to see what was missed
     4. Choose a subagent (explore/librarian/deep — agent decides) to draft an optimized scheme JSON
-    5. Write the new scheme to `.prunifier/schemes/<command-slug>.json`
+    5. Write the new scheme to `.prunify/schemes/<command-slug>.json`
     6. Validate with `prunify <command>` — verify `[PRUNED]` disappears (exact match now)
   - Include a concrete example: `git status --short` prefix-matched to `git status` scheme → subagent creates `git-status-short.json`
   - Note: "The agent using this skill decides which subagent to spawn. explore is good for analysis, librarian for external research, deep for complex scheme design."
@@ -1890,7 +1890,7 @@ print('OK: uses column selectors')
   - **Blocked By**: Task 23 (SKILL.md must exist)
 
   **References**:
-  - Pattern: `.opencode/skills/prunifier/SKILL.md` from Task 23 — existing skill file
+  - Pattern: `.opencode/skills/prunify/SKILL.md` from Task 23 — existing skill file
 
   **Acceptance Criteria**:
   - [ ] SKILL.md has "Mode 2: Prefix Match Workflow" section header
@@ -1905,11 +1905,11 @@ print('OK: uses column selectors')
     Tool: Bash
     Preconditions: SKILL.md exists
     Steps:
-      1. Run: grep -c "Mode 2" .opencode/skills/prunifier/SKILL.md
+      1. Run: grep -c "Mode 2" .opencode/skills/prunify/SKILL.md
       2. Assert: count >= 1
-      3. Run: grep -ci "prefix match" .opencode/skills/prunifier/SKILL.md
+      3. Run: grep -ci "prefix match" .opencode/skills/prunify/SKILL.md
       4. Assert: count >= 1
-      5. Run: grep -c "subagent" .opencode/skills/prunifier/SKILL.md
+      5. Run: grep -c "subagent" .opencode/skills/prunify/SKILL.md
       6. Assert: count >= 1
     Expected Result: Mode 2 workflow fully documented
     Failure Indicators: Missing mode 2 section, no subagent mention
@@ -1920,20 +1920,20 @@ print('OK: uses column selectors')
   - [ ] `task-24-skill-mode2.txt` — mode 2 documentation check
 
   **Commit**: YES (Wave 4 group)
-  - Message: `docs(prunifier): mode-2 workflow for prefix match subagent optimization`
-  - Files: `.opencode/skills/prunifier/SKILL.md`
-  - Pre-commit: `grep -q "Mode 2" .opencode/skills/prunifier/SKILL.md`
+  - Message: `docs(prunify): mode-2 workflow for prefix match subagent optimization`
+  - Files: `.opencode/skills/prunify/SKILL.md`
+  - Pre-commit: `grep -q "Mode 2" .opencode/skills/prunify/SKILL.md`
 
 - [x] 25. OpenCode skill: Mode-3 workflow (new command → subagent analysis)
 
   **What to do**:
-  - Add a "Mode 3: New Command Workflow" section to `.opencode/skills/prunifier/SKILL.md`
+  - Add a "Mode 3: New Command Workflow" section to `.opencode/skills/prunify/SKILL.md`
   - Document the workflow: when agent sees `[UNKNOWN COMMAND]` in stderr, it should:
     1. Review the raw output (passed through unchanged)
     2. Decide if this command's output would benefit from pruning (not all commands need it)
     3. If pruning would help: choose a subagent (explore/librarian/deep) to analyze the output
     4. The subagent should identify repetitive/metadata/noise patterns and draft a scheme JSON
-    5. Write the scheme to `.prunifier/schemes/<command-slug>.json`
+    5. Write the scheme to `.prunify/schemes/<command-slug>.json`
     6. Test with `prunify <command>` — confirm output is pruned usefully
     7. If the scheme is high-quality and the command is common, suggest contributing it back upstream
   - Include a concrete example: new command `docker ps` → subagent analyzes columnar output, creates scheme keeping CONTAINER_ID + NAMES columns
@@ -1956,7 +1956,7 @@ print('OK: uses column selectors')
   - **Blocked By**: Task 23 (SKILL.md must exist)
 
   **References**:
-  - Pattern: `.opencode/skills/prunifier/SKILL.md` from Task 23 — existing skill file
+  - Pattern: `.opencode/skills/prunify/SKILL.md` from Task 23 — existing skill file
 
   **Acceptance Criteria**:
   - [ ] SKILL.md has "Mode 3: New Command Workflow" section header
@@ -1972,11 +1972,11 @@ print('OK: uses column selectors')
     Tool: Bash
     Preconditions: SKILL.md exists
     Steps:
-      1. Run: grep -c "Mode 3" .opencode/skills/prunifier/SKILL.md
+      1. Run: grep -c "Mode 3" .opencode/skills/prunify/SKILL.md
       2. Assert: count >= 1
-      3. Run: grep -ci "new command" .opencode/skills/prunifier/SKILL.md
+      3. Run: grep -ci "new command" .opencode/skills/prunify/SKILL.md
       4. Assert: count >= 1
-      5. Run: grep -ci "docker" .opencode/skills/prunifier/SKILL.md
+      5. Run: grep -ci "docker" .opencode/skills/prunify/SKILL.md
       6. Assert: count >= 1
     Expected Result: Mode 3 workflow fully documented with example
     Failure Indicators: Missing mode 3 section, no example
@@ -1987,9 +1987,9 @@ print('OK: uses column selectors')
   - [ ] `task-25-skill-mode3.txt` — mode 3 documentation check
 
   **Commit**: YES (Wave 4 group)
-  - Message: `docs(prunifier): mode-3 workflow for new command subagent analysis`
-  - Files: `.opencode/skills/prunifier/SKILL.md`
-  - Pre-commit: `grep -q "Mode 3" .opencode/skills/prunifier/SKILL.md`
+  - Message: `docs(prunify): mode-3 workflow for new command subagent analysis`
+  - Files: `.opencode/skills/prunify/SKILL.md`
+  - Pre-commit: `grep -q "Mode 3" .opencode/skills/prunify/SKILL.md`
 
 - [x] 26. Edge case: Binary output handling
 
@@ -2047,7 +2047,7 @@ print('OK: uses column selectors')
     Tool: Bash
     Preconditions: cargo build succeeded, ls-la scheme exists
     Steps:
-      1. Run: ./target/debug/prunify ls -la /root/prunifier 2>&1
+      1. Run: ./target/debug/prunify ls -la /root/prunify 2>&1
       2. Assert: output does NOT contain "total" (pruned correctly)
     Expected Result: Normal text pruning still works
     Failure Indicators: Binary detection false-positive prevents pruning
@@ -2059,7 +2059,7 @@ print('OK: uses column selectors')
   - [ ] `task-26-text-still-pruned.txt` — text pruning still works test
 
   **Commit**: YES (Wave 4 group)
-  - Message: `feat(prunifier): binary output detection and passthrough`
+  - Message: `feat(prunify): binary output detection and passthrough`
   - Files: `src/proxy/binary_detector.rs`, `tests/binary_output_test.rs`
   - Pre-commit: `cargo test binary_output_test`
 
@@ -2116,7 +2116,7 @@ print('OK: uses column selectors')
     Tool: Bash
     Preconditions: cargo build succeeded, ls-la scheme exists
     Steps:
-      1. Run: ./target/debug/prunify ls -la --color=always /root/prunifier 2>&1
+      1. Run: ./target/debug/prunify ls -la --color=always /root/prunify 2>&1
       2. Assert: output does NOT contain "total" (pruning worked after ANSI strip)
       3. Assert: output does NOT contain escape sequences (ANSI stripped)
     Expected Result: Colored ls output is both stripped and pruned
@@ -2129,7 +2129,7 @@ print('OK: uses column selectors')
   - [ ] `task-27-ansi-ls-pruned.txt` — integration test output
 
   **Commit**: YES (Wave 4 group)
-  - Message: `feat(prunifier): ANSI escape code stripping before pruning`
+  - Message: `feat(prunify): ANSI escape code stripping before pruning`
   - Files: `src/engine/ansi_stripper.rs`, `tests/ansi_test.rs`
   - Pre-commit: `cargo test ansi_test`
 
@@ -2177,7 +2177,7 @@ print('OK: uses column selectors')
     Steps:
       1. mkdir /tmp/test-unicode && cd /tmp/test-unicode
       2. touch "résumé.txt" "ファイル.txt" "😀.txt"
-      3. Run: /root/prunifier/target/debug/prunify ls -la 2>&1
+      3. Run: /root/prunify/target/debug/prunify ls -la 2>&1
       4. Assert: output contains "résumé.txt"
       5. Assert: output contains "ファイル.txt"
       6. Assert: output does NOT contain "total" (pruned)
@@ -2189,7 +2189,7 @@ print('OK: uses column selectors')
     Tool: Bash
     Preconditions: cargo build succeeded
     Steps:
-      1. Run: /root/prunifier/target/debug/prunify echo "✅ Tests pass 😀" 2>&1
+      1. Run: /root/prunify/target/debug/prunify echo "✅ Tests pass 😀" 2>&1
       2. Assert: output contains "✅ Tests pass 😀"
     Expected Result: Emoji preserved in passthrough
     Failure Indicators: Emoji corrupted or missing
@@ -2201,7 +2201,7 @@ print('OK: uses column selectors')
   - [ ] `task-28-unicode-emoji.txt` — emoji passthrough test
 
   **Commit**: YES (Wave 4 group)
-  - Message: `test(prunifier): unicode and multibyte character handling`
+  - Message: `test(prunify): unicode and multibyte character handling`
   - Files: `tests/unicode_test.rs`
   - Pre-commit: `cargo test unicode_test`
 
@@ -2277,7 +2277,7 @@ print('OK: uses column selectors')
   - [ ] `task-29-signal-normal.txt` — normal exit still works
 
   **Commit**: YES (Wave 4 group)
-  - Message: `feat(prunifier): signal forwarding (SIGINT/SIGTERM) to child process`
+  - Message: `feat(prunify): signal forwarding (SIGINT/SIGTERM) to child process`
   - Files: `src/proxy/signal_handler.rs`, `Cargo.toml` (add ctrlc dep)
   - Pre-commit: `cargo test`
 
@@ -2309,8 +2309,8 @@ print('OK: uses column selectors')
 
   **References**:
   - Pattern: `tests/shell_tests.sh` from Task 22 — existing shell test structure
-  - Pattern: `.prunifier/schemes/git-status.json` — Built-in scheme
-  - Pattern: `.prunifier/schemes/ls-la.json` — Built-in scheme
+  - Pattern: `.prunify/schemes/git-status.json` — Built-in scheme
+  - Pattern: `.prunify/schemes/ls-la.json` — Built-in scheme
 
   **Acceptance Criteria**:
   - [ ] `bash tests/shell_tests.sh` runs all scenarios
@@ -2350,7 +2350,7 @@ print('OK: uses column selectors')
   - [ ] `task-30-mode1-detail.txt` — mode 1 specific results
 
   **Commit**: YES (Wave 4 group)
-  - Message: `test(prunifier): comprehensive integration test suite covering all modes and edge cases`
+  - Message: `test(prunify): comprehensive integration test suite covering all modes and edge cases`
   - Files: `tests/shell_tests.sh`
   - Pre-commit: `bash tests/shell_tests.sh`
 
@@ -2383,11 +2383,11 @@ print('OK: uses column selectors')
 
 ## Commit Strategy
 
-- **Wave 1**: `feat(prunifier): project scaffolding, types, and schema definitions` — Cargo.{toml,lock}, src/types/*.rs
-- **Wave 2**: `feat(prunifier): core engine — trie matcher, line parser, schemes, config` — src/engine/*.rs, .prunifier/schemes/*.json
-- **Wave 3**: `feat(prunifier): proxy engine — executor, dispatcher, TTY guard, CLI` — src/proxy/*.rs, src/main.rs
-- **Wave 4**: `feat(prunifier): skill, edge cases, final integration` — .opencode/skills/*, src/edge/*.rs, tests/
-- **FINAL**: `chore(prunifier): verification wave fixes` — various (from F1-F4 findings)
+- **Wave 1**: `feat(prunify): project scaffolding, types, and schema definitions` — Cargo.{toml,lock}, src/types/*.rs
+- **Wave 2**: `feat(prunify): core engine — trie matcher, line parser, schemes, config` — src/engine/*.rs, .prunify/schemes/*.json
+- **Wave 3**: `feat(prunify): proxy engine — executor, dispatcher, TTY guard, CLI` — src/proxy/*.rs, src/main.rs
+- **Wave 4**: `feat(prunify): skill, edge cases, final integration` — .opencode/skills/*, src/edge/*.rs, tests/
+- **FINAL**: `chore(prunify): verification wave fixes` — various (from F1-F4 findings)
 
 ---
 

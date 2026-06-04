@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use prunifier::engine::CommandTrie;
-use prunifier::proxy::dispatcher::{DispatchMode, Dispatcher};
-use prunifier::scheme::{Action, MatchCondition, Rule, Scheme};
+use prunify::engine::CommandTrie;
+use prunify::proxy::dispatcher::{DispatchMode, Dispatcher};
+use prunify::scheme::{Action, MatchCondition, Rule, Scheme};
 
 fn make_scheme(command: &str, rules: Vec<Rule>) -> Scheme {
     Scheme {

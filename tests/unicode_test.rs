@@ -2,22 +2,22 @@ mod common;
 
 use common::run_prunify;
 
-use prunifier::engine::column_selector::ColumnSelector;
-use prunifier::engine::line_parser::LineParser;
-use prunifier::scheme::{Action, MatchCondition, Rule};
+use prunify::engine::column_selector::ColumnSelector;
+use prunify::engine::line_parser::LineParser;
+use prunify::scheme::{Action, MatchCondition, Rule};
 
 // ---------------------------------------------------------------------------
 // Test 1: Integration — CJK and emoji passthrough via binary
 // ---------------------------------------------------------------------------
 
-/// Invoke `prunifier echo …` with CJK and emoji text.  The binary runs in
+/// Invoke `prunify echo …` with CJK and emoji text.  The binary runs in
 /// passthrough mode (no scheme for "echo") so the original output must be
 /// preserved verbatim, with only the [UNKNOWN COMMAND] marker appended.
 #[test]
 fn test_unicode_passthrough_via_binary() {
     // CJK characters
     let (stdout, stderr, code) = run_prunify(&["echo", "文件1", "文件2"]);
-    assert_eq!(code, 0, "prunifier echo of CJK text should exit 0");
+    assert_eq!(code, 0, "prunify echo of CJK text should exit 0");
     assert!(
         stdout.contains("文件1"),
         "expected CJK filename '文件1' in output, got: {:?}",
@@ -36,7 +36,7 @@ fn test_unicode_passthrough_via_binary() {
 
     // Emoji characters
     let (stdout, stderr, code) = run_prunify(&["echo", "✅", "❌", "🎉"]);
-    assert_eq!(code, 0, "prunifier echo of emoji should exit 0");
+    assert_eq!(code, 0, "prunify echo of emoji should exit 0");
     assert!(
         stdout.contains("✅"),
         "expected ✅ in output, got: {:?}",

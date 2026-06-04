@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
-  "active_work_id": "prunifier-skill-and-proxy-8013b886",
+  "active_work_id": "prunify-skill-and-proxy-8013b886",
   "works": {
-    "prunifier-skill-and-proxy-8013b886": {
-      "work_id": "prunifier-skill-and-proxy-8013b886",
-      "active_plan": "/root/prunifier/.omo/plans/prunifier-skill-and-proxy.md",
-      "plan_name": "prunifier-skill-and-proxy",
+    "prunify-skill-and-proxy-8013b886": {
+      "work_id": "prunify-skill-and-proxy-8013b886",
+      "active_plan": "/root/prunify/.omo/plans/prunify-skill-and-proxy.md",
+      "plan_name": "prunify-skill-and-proxy",
       "status": "completed",
       "started_at": "2026-06-04T06:15:22.010Z",
       "updated_at": "2026-06-04T07:38:46.571Z",
@@ -52,7 +52,9 @@
           "category": "deep",
           "updated_at": "2026-06-04T06:28:53.352Z",
           "started_at": "2026-06-04T06:28:53.352Z",
-          "status": "running"
+          "status": "completed",
+          "ended_at": "2026-06-04T06:28:53.352Z",
+          "elapsed_ms": 0
         },
         "todo:30": {
           "task_key": "todo:30",
@@ -70,7 +72,7 @@
         "final-wave:f1": {
           "task_key": "final-wave:f1",
           "task_label": "F1",
-          "task_title": "**Plan Compliance Audit** — `oracle`",
+          "task_title": "**Plan Compliance Audit** \u2014 `oracle`",
           "session_id": "opencode:ses_16e6fd86effezu8StIoTSRiLme",
           "agent": "Sisyphus-Junior",
           "category": "quick",
@@ -85,7 +87,7 @@
       "elapsed_ms": 5004561
     }
   },
-  "active_plan": "/root/prunifier/.omo/plans/prunifier-skill-and-proxy.md",
+  "active_plan": "/root/prunify/.omo/plans/prunify-skill-and-proxy.md",
   "started_at": "2026-06-04T06:15:22.010Z",
   "status": "completed",
   "updated_at": "2026-06-04T07:38:46.571Z",
@@ -95,7 +97,7 @@
   "session_origins": {
     "opencode:ses_16f25c71fffeif20xDuUajuIpp": "direct"
   },
-  "plan_name": "prunifier-skill-and-proxy",
+  "plan_name": "prunify-skill-and-proxy",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
@@ -150,7 +152,7 @@
     "final-wave:f1": {
       "task_key": "final-wave:f1",
       "task_label": "F1",
-      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "task_title": "**Plan Compliance Audit** \u2014 `oracle`",
       "session_id": "opencode:ses_16e6fd86effezu8StIoTSRiLme",
       "agent": "Sisyphus-Junior",
       "category": "quick",

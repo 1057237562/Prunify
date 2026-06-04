@@ -1,9 +1,9 @@
 use thiserror::Error;
 
-pub type PrunifierResult<T> = Result<T, PrunifierError>;
+pub type PrunifyResult<T> = Result<T, PrunifyError>;
 
 #[derive(Error, Debug)]
-pub enum PrunifierError {
+pub enum PrunifyError {
     #[error("Scheme not found: {0}")]
     SchemeNotFound(String),
 

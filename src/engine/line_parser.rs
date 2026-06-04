@@ -1,4 +1,4 @@
-use crate::error::PrunifierResult;
+use crate::error::PrunifyResult;
 use crate::scheme::{Action, MatchCondition, Rule};
 
 pub struct LineParser;
@@ -6,7 +6,7 @@ pub struct LineParser;
 impl LineParser {
     /// Apply rules to output string. Rules are applied in order sequentially.
     /// Each rule operates on the result of the previous rule.
-    pub fn apply_rules(output: &str, rules: &[Rule]) -> PrunifierResult<String> {
+    pub fn apply_rules(output: &str, rules: &[Rule]) -> PrunifyResult<String> {
         if output.is_empty() {
             return Ok(String::new());
         }

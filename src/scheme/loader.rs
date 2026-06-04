@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::config::types::PrunifierConfig;
-use crate::error::PrunifierResult;
+use crate::config::types::PrunifyConfig;
+use crate::error::PrunifyResult;
 use crate::scheme::storage::SchemeStorage;
 use crate::scheme::types::Scheme;
 
@@ -23,11 +23,11 @@ impl SchemeLoader {
     ///
     /// 1. Loads all `.json` scheme files from `self.default_dir`.
     /// 2. Loads all `.json` scheme files from the project override directory
-    ///    (determined by `config.scheme_dir` or default `".prunifier/schemes/"`).
+    ///    (determined by `config.scheme_dir` or default `".prunify/schemes/"`).
     /// 3. Project schemes override defaults with the same `command` key.
     ///
     /// Missing or empty directories are skipped (not an error).
-    pub fn load(&self, config: &PrunifierConfig) -> PrunifierResult<HashMap<String, Scheme>> {
+    pub fn load(&self, config: &PrunifyConfig) -> PrunifyResult<HashMap<String, Scheme>> {
         let mut schemes = HashMap::new();
 
         // Load defaults
@@ -40,7 +40,7 @@ impl SchemeLoader {
         let project_dir = config
             .scheme_dir
             .clone()
-            .unwrap_or_else(|| PathBuf::from(".prunifier/schemes/"));
+            .unwrap_or_else(|| PathBuf::from(".prunify/schemes/"));
 
         // Load project overrides (completely replaces defaults for same command)
         let project_schemes = SchemeStorage::load_all(&project_dir)?;

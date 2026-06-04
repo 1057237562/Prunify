@@ -3,7 +3,7 @@ use std::process::Command;
 
 /// Run prunify with the given args and return (stdout, stderr, exit_code)
 pub fn run_prunify(args: &[&str]) -> (String, String, i32) {
-    let output = Command::new("./target/debug/prunifier")
+    let output = Command::new("./target/debug/prunify")
         .args(args)
         .output()
         .expect("Failed to run prunify");
@@ -15,7 +15,7 @@ pub fn run_prunify(args: &[&str]) -> (String, String, i32) {
 
 /// Create a temporary directory for test isolation
 pub fn temp_dir(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("prunifier-test-{}", name));
+    let dir = std::env::temp_dir().join(format!("prunify-test-{}", name));
     let _ = std::fs::create_dir_all(&dir);
     dir
 }

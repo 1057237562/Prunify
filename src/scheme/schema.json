@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://prunifier.dev/schemes/v1/scheme.json",
-  "title": "Prunifier Scheme",
-  "description": "A line-based output pruning scheme for prunifier — defines rules to keep or discard lines from command output.",
+  "$id": "https://prunify.dev/schemes/v1/scheme.json",
+  "title": "Prunify Scheme",
+  "description": "A line-based output pruning scheme for prunify — defines rules to keep or discard lines from command output.",
   "type": "object",
   "properties": {
     "command": {

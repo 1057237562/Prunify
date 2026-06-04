@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use prunifier::scheme::SchemeStorage;
+use prunify::scheme::SchemeStorage;
 
 const FIXTURES_DIR: &str = "tests/fixtures";
 

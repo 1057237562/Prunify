@@ -1,10 +1,10 @@
 use std::path::Path;
 
 /// Guards against recursive self-invocation by detecting when
-/// `prunify`/`prunifier` is trying to proxy itself.
+/// `prunify` is trying to proxy itself.
 ///
 /// Detection works by examining the first token of the proxied command
-/// and checking whether it matches known binary names ("prunify", "prunifier")
+/// and checking whether it matches the binary name "prunify"
 /// or the current executable's file stem.
 pub struct RecursionGuard;
 
@@ -12,8 +12,8 @@ impl RecursionGuard {
     /// Check if the given command string would cause recursion.
     ///
     /// Returns `true` if the first token of `command` is:
-    /// - Literally "prunify" or "prunifier"
-    /// - A path whose file stem is "prunify" or "prunifier"
+    /// - Literally "prunify"
+    /// - A path whose file stem is "prunify"
     /// - The file stem of the currently running executable
     ///
     /// Returns `false` for empty strings, whitespace-only strings,
@@ -24,13 +24,13 @@ impl RecursionGuard {
             _ => return false,
         };
 
-        // Direct match: first token is exactly "prunify" or "prunifier"
-        if first_token == "prunify" || first_token == "prunifier" {
+        // Direct match: first token is exactly "prunify"
+        if first_token == "prunify" {
             return true;
         }
 
         // Extract file stem from the first token (handles paths like
-        // "./target/debug/prunify" or "/usr/local/bin/prunifier")
+        // "./target/debug/prunify" or "/usr/local/bin/prunify")
         let token_stem = Path::new(first_token)
             .file_stem()
             .and_then(|s| s.to_str())
@@ -38,7 +38,7 @@ impl RecursionGuard {
 
         if !token_stem.is_empty()
             && token_stem != first_token
-            && (token_stem == "prunify" || token_stem == "prunifier")
+            && token_stem == "prunify"
         {
             return true;
         }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# shell_tests.sh — End-to-end integration tests for prunifier
+# shell_tests.sh — End-to-end integration tests for prunify
 #
 # Tests all 3 modes, built-in schemes, exit codes, flags, recursion guard,
 # stderr passthrough, and the --no-mark / --scheme-dir options.
@@ -10,9 +10,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PRUNIFIER_BIN="$SCRIPT_DIR/../target/debug/prunifier"
-SCHEMES_DIR="$SCRIPT_DIR/../.prunifier/schemes"
-TEMP_DIR="/tmp/prunifier-tests-$$"
+PRUNIFY_BIN="$SCRIPT_DIR/../target/debug/prunify"
+SCHEMES_DIR="$SCRIPT_DIR/../.prunify/schemes"
+TEMP_DIR="/tmp/prunify-tests-$$"
 
 PASS=0
 FAIL=0
@@ -27,7 +27,7 @@ trap cleanup EXIT
 mkdir -p "$TEMP_DIR"
 
 echo ""
-echo "=== prunifier shell tests ==="
+echo "=== prunify shell tests ==="
 echo ""
 
 # -----------------------------------------------------------------------
@@ -35,7 +35,7 @@ echo ""
 # -----------------------------------------------------------------------
 test1() {
     local output
-    output=$("$PRUNIFIER_BIN" --no-mark ls -la 2>/dev/null)
+    output=$("$PRUNIFY_BIN" --no-mark ls -la 2>/dev/null)
     # The "total N" line must be removed
     echo "$output" | grep -q "^total" && return 1
     # The "." entry (line ending with " .") must be removed
@@ -62,7 +62,7 @@ test2() {
         cd "$git_dir" || exit 1
         git init >/dev/null 2>&1
         touch foo
-        output=$("$PRUNIFIER_BIN" --scheme-dir "$SCHEMES_DIR" --no-mark git status 2>/dev/null)
+        output=$("$PRUNIFY_BIN" --scheme-dir "$SCHEMES_DIR" --no-mark git status 2>/dev/null)
         echo "$output" | grep -q "On branch" && exit 1
         exit 0
     )
@@ -80,7 +80,7 @@ fi
 # -----------------------------------------------------------------------
 test3() {
     local output
-    output=$("$PRUNIFIER_BIN" ls -la --color=auto 2>/dev/null)
+    output=$("$PRUNIFY_BIN" ls -la --color=auto 2>/dev/null)
     echo "$output" | grep -q "\[PRUNED\]" || return 1
     return 0
 }
@@ -97,7 +97,7 @@ fi
 # -----------------------------------------------------------------------
 test4() {
     local output
-    output=$("$PRUNIFIER_BIN" echo hello 2>&1)
+    output=$("$PRUNIFY_BIN" echo hello 2>&1)
     echo "$output" | grep -q "\[UNKNOWN COMMAND\]" || return 1
     # The proxied command output should also be present
     echo "$output" | grep -q "hello" || return 1
@@ -112,10 +112,10 @@ else
 fi
 
 # -----------------------------------------------------------------------
-# Test 5 — Exit code propagation: prunifier exits with command's exit code
+# Test 5 — Exit code propagation: prunify exits with command's exit code
 # -----------------------------------------------------------------------
 test5() {
-    "$PRUNIFIER_BIN" false >/dev/null 2>&1
+    "$PRUNIFY_BIN" false >/dev/null 2>&1
     local rc=$?
     # false exits with code 1
     [ "$rc" -eq 1 ] || return 1
@@ -130,12 +130,12 @@ else
 fi
 
 # -----------------------------------------------------------------------
-# Test 6 — Recursion guard: prunifier detects self-invocation
+# Test 6 — Recursion guard: prunify detects self-invocation
 # -----------------------------------------------------------------------
 test6() {
     local stderr
     # Capture stderr only (stdout goes to /dev/null)
-    stderr=$("$PRUNIFIER_BIN" prunifier echo hello 2>&1 1>/dev/null)
+    stderr=$("$PRUNIFY_BIN" prunify echo hello 2>&1 1>/dev/null)
     echo "$stderr" | grep -qi "recursion" || return 1
     return 0
 }
@@ -152,7 +152,7 @@ fi
 # -----------------------------------------------------------------------
 test7() {
     local output
-    output=$("$PRUNIFIER_BIN" --no-mark echo hello 2>&1)
+    output=$("$PRUNIFY_BIN" --no-mark echo hello 2>&1)
     # [UNKNOWN COMMAND] must NOT appear
     echo "$output" | grep -q "\[UNKNOWN COMMAND\]" && return 1
     # But the proxied output (hello) must still be present
@@ -172,15 +172,15 @@ fi
 # -----------------------------------------------------------------------
 test8() {
     local output
-    output=$("$PRUNIFIER_BIN" --version 2>&1)
-    echo "$output" | grep -q "prunifier 0.1.0" || return 1
+    output=$("$PRUNIFY_BIN" --version 2>&1)
+    echo "$output" | grep -q "prunify 0.1.0" || return 1
     return 0
 }
 if test8; then
-    green "  PASS: [8] --version — shows prunifier 0.1.0"
+    green "  PASS: [8] --version — shows prunify 0.1.0"
     PASS=$((PASS + 1))
 else
-    red "  FAIL: [8] --version — shows prunifier 0.1.0"
+    red "  FAIL: [8] --version — shows prunify 0.1.0"
     FAIL=$((FAIL + 1))
 fi
 
@@ -189,7 +189,7 @@ fi
 # -----------------------------------------------------------------------
 test9() {
     local output
-    output=$("$PRUNIFIER_BIN" --help 2>&1)
+    output=$("$PRUNIFY_BIN" --help 2>&1)
     echo "$output" | grep -qi "usage" || return 1
     echo "$output" | grep -qi "proxy" || return 1
     return 0
@@ -210,7 +210,7 @@ test10() {
     rm -rf "$custom_dir" && mkdir -p "$custom_dir"
     cp "$SCHEMES_DIR/ls-la.json" "$custom_dir/"
     local output
-    output=$("$PRUNIFIER_BIN" --scheme-dir "$custom_dir" --no-mark ls -la 2>/dev/null)
+    output=$("$PRUNIFY_BIN" --scheme-dir "$custom_dir" --no-mark ls -la 2>/dev/null)
     # Should prune "total" line using the custom scheme
     echo "$output" | grep -q "^total" && return 1
     return 0
@@ -228,7 +228,7 @@ fi
 # -----------------------------------------------------------------------
 test11() {
     local output
-    output=$("$PRUNIFIER_BIN" --no-mark ps aux 2>/dev/null)
+    output=$("$PRUNIFY_BIN" --no-mark ps aux 2>/dev/null)
     # Verify no root processes remain in pruned output
     echo "$output" | grep -q "^root" && return 1
     return 0
@@ -247,7 +247,7 @@ fi
 test12() {
     local output
     # Combine stdout+stderr to capture the error
-    output=$("$PRUNIFIER_BIN" ls /nonexistent 2>&1)
+    output=$("$PRUNIFY_BIN" ls /nonexistent 2>&1)
     echo "$output" | grep -qi "No such file" || return 1
     return 0
 }
@@ -264,7 +264,7 @@ fi
 # -----------------------------------------------------------------------
 test13() {
     local output
-    output=$("$PRUNIFIER_BIN" ls -la 2>/dev/null)
+    output=$("$PRUNIFY_BIN" ls -la 2>/dev/null)
     # Exact match must NOT have [PRUNED] or [UNKNOWN COMMAND]
     echo "$output" | grep -q "\[PRUNED\]" && return 1
     echo "$output" | grep -q "\[UNKNOWN COMMAND\]" && return 1
@@ -283,7 +283,7 @@ fi
 # -----------------------------------------------------------------------
 test14() {
     local output rc
-    output=$("$PRUNIFIER_BIN" 2>&1) || rc=$?
+    output=$("$PRUNIFY_BIN" 2>&1) || rc=$?
     # Should exit with non-zero and show usage
     [ "${rc:-0}" -ne 0 ] || return 1
     echo "$output" | grep -qi "error" || return 1
@@ -310,8 +310,8 @@ test15() {
     # Direct checksum of the raw binary
     ref_hash=$(md5sum < "$bin_file" | cut -d' ' -f1)
 
-    # Checksum after piping through prunifier --no-mark
-    prun_hash=$("$PRUNIFIER_BIN" --no-mark cat "$bin_file" 2>/dev/null | md5sum | cut -d' ' -f1)
+    # Checksum after piping through prunify --no-mark
+    prun_hash=$("$PRUNIFY_BIN" --no-mark cat "$bin_file" 2>/dev/null | md5sum | cut -d' ' -f1)
 
     [ "$ref_hash" = "$prun_hash" ] || return 1
     return 0
@@ -333,8 +333,8 @@ test16() {
     # Generate known ANSI output, checksum directly
     direct_hash=$(printf '\x1b[31mRED\x1b[0m\n' | md5sum | cut -d' ' -f1)
 
-    # Same input through prunifier --no-mark cat
-    prun_hash=$(printf '\x1b[31mRED\x1b[0m\n' | "$PRUNIFIER_BIN" --no-mark cat 2>/dev/null | md5sum | cut -d' ' -f1)
+    # Same input through prunify --no-mark cat
+    prun_hash=$(printf '\x1b[31mRED\x1b[0m\n' | "$PRUNIFY_BIN" --no-mark cat 2>/dev/null | md5sum | cut -d' ' -f1)
 
     [ "$direct_hash" = "$prun_hash" ] || return 1
     return 0
@@ -352,7 +352,7 @@ fi
 # -----------------------------------------------------------------------
 test17() {
     local output
-    output=$("$PRUNIFIER_BIN" --no-mark echo "✅ ファイル 中文 test" 2>/dev/null)
+    output=$("$PRUNIFY_BIN" --no-mark echo "✅ ファイル 中文 test" 2>/dev/null)
     echo "$output" | grep -q "✅"      || return 1
     echo "$output" | grep -q "ファイル" || return 1
     echo "$output" | grep -q "中文"     || return 1
@@ -368,11 +368,11 @@ else
 fi
 
 # -----------------------------------------------------------------------
-# Test 18 — Large output: 5000 lines through prunifier
+# Test 18 — Large output: 5000 lines through prunify
 # -----------------------------------------------------------------------
 test18() {
     local line_count
-    line_count=$("$PRUNIFIER_BIN" --no-mark seq 1 5000 2>/dev/null | wc -l)
+    line_count=$("$PRUNIFY_BIN" --no-mark seq 1 5000 2>/dev/null | wc -l)
     [ "$line_count" -eq 5000 ] || return 1
     return 0
 }
@@ -389,7 +389,7 @@ fi
 # -----------------------------------------------------------------------
 test19() {
     local output rc
-    output=$("$PRUNIFIER_BIN" --no-mark true 2>/dev/null) || rc=$?
+    output=$("$PRUNIFY_BIN" --no-mark true 2>/dev/null) || rc=$?
     [ -z "$output" ]     || return 1
     [ "${rc:-0}" -eq 0 ] || return 1
     return 0
