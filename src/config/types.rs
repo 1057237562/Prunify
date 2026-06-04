@@ -32,10 +32,13 @@ impl Default for PrunifyConfig {
     }
 }
 
-/// Returns the default prunify directory: `~/.prunify/`
+/// Returns the default prunify directory: `$HOME/.prunify/` (Unix) or
+/// `%USERPROFILE%\.prunify\` (Windows).
 ///
-/// Falls back to `./.prunify/` if `$HOME` is not set.
+/// Falls back to `./.prunify/` if neither environment variable is set.
 pub fn default_prunify_dir() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
     PathBuf::from(home).join(".prunify")
 }
