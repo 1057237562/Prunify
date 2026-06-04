@@ -6,37 +6,46 @@ use crate::error::PrunifyResult;
 use crate::scheme::storage::SchemeStorage;
 use crate::scheme::types::Scheme;
 
-/// Loads schemes by merging default schemes with per-project overrides.
+/// Loads schemes with a two-level separation: project-local schemes first,
+/// then global fallback schemes from `~/.prunify/schemes/`.
 ///
-/// Project overrides COMPLETELY REPLACE default schemes for the same command
-/// (no deep merging of rules).
+/// - **Project schemes**: loaded from `config.scheme_dir`, `.prunify/schemes/`,
+///   or fall back to `~/.prunify/schemes/` (if no local schemes dir exists).
+/// - **Fallback schemes**: loaded from `self.fallback_dir` (`~/.prunify/schemes/`).
+///
+/// During dispatch, project schemes are consulted first. If a command is not
+/// found there, fallback schemes are checked before falling through to passthrough.
 pub struct SchemeLoader {
-    default_dir: PathBuf,
+    fallback_dir: PathBuf,
 }
 
 impl SchemeLoader {
-    pub fn new(default_dir: PathBuf) -> Self {
-        Self { default_dir }
+    pub fn new(fallback_dir: PathBuf) -> Self {
+        Self { fallback_dir }
     }
 
-    /// Load all schemes, merging defaults and project overrides.
+    /// Load all schemes, returning project-level and fallback-level separately.
     ///
-    /// 1. Loads all `.json` scheme files from `self.default_dir`.
-    /// 2. Loads all `.json` scheme files from the project override directory
-    ///    (determined by `config.scheme_dir` or default `"~/.prunify/schemes/"`).
-    /// 3. Project schemes override defaults with the same `command` key.
+    /// 1. Determines the project scheme directory:
+    ///    - `config.scheme_dir` if set,
+    ///    - otherwise `.prunify/schemes/` if it exists (project-local bundled schemes),
+    ///    - otherwise `~/.prunify/schemes/`.
+    /// 2. Loads `.json` scheme files from the **project** directory into `project_schemes`.
+    /// 3. Loads `.json` scheme files from the **fallback** directory (`~/.prunify/schemes/`)
+    ///    *only if it is a different directory* from the project dir — avoiding
+    ///    double-loading.
     ///
     /// Missing or empty directories are skipped (not an error).
-    pub fn load(&self, config: &PrunifyConfig) -> PrunifyResult<HashMap<String, Scheme>> {
-        let mut schemes = HashMap::new();
+    pub fn load(
+        &self,
+        config: &PrunifyConfig,
+    ) -> PrunifyResult<(
+        HashMap<String, Scheme>,
+        HashMap<String, Scheme>,
+    )> {
+        let mut project_schemes = HashMap::new();
 
-        // Load defaults
-        let default_schemes = SchemeStorage::load_all(&self.default_dir)?;
-        for s in default_schemes {
-            schemes.insert(s.command.clone(), s);
-        }
-
-        // Determine project override directory
+        // Determine project scheme directory
         let project_dir = config
             .scheme_dir
             .clone()
@@ -48,16 +57,25 @@ impl SchemeLoader {
                 if local.exists() {
                     local
                 } else {
-                    crate::config::default_prunify_dir().join("schemes")
+                    self.fallback_dir.clone()
                 }
             });
 
-        // Load project overrides (completely replaces defaults for same command)
-        let project_schemes = SchemeStorage::load_all(&project_dir)?;
-        for s in project_schemes {
-            schemes.insert(s.command.clone(), s);
+        // Load project-level schemes
+        let loaded = SchemeStorage::load_all(&project_dir)?;
+        for s in loaded {
+            project_schemes.insert(s.command.clone(), s);
         }
 
-        Ok(schemes)
+        // Load fallback schemes only if the directory differs from project dir
+        let mut fallback_schemes = HashMap::new();
+        if self.fallback_dir != project_dir {
+            let loaded = SchemeStorage::load_all(&self.fallback_dir)?;
+            for s in loaded {
+                fallback_schemes.insert(s.command.clone(), s);
+            }
+        }
+
+        Ok((project_schemes, fallback_schemes))
     }
 }

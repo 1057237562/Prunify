@@ -26,8 +26,8 @@ fn main() -> PrunifyResult<()> {
     };
 
     // Load config, schemes, and trie
-    let (config, schemes, trie) = load_setup(&cli)?;
-    let dispatcher = Dispatcher::new(trie, schemes);
+    let (config, project_schemes, fallback_schemes, trie) = load_setup(&cli)?;
+    let dispatcher = Dispatcher::new(trie, project_schemes, fallback_schemes);
 
     // Execute single command through the pipeline
     let exit_code = execute_and_print(&command, &config, &dispatcher, &cli)?;
@@ -36,7 +36,16 @@ fn main() -> PrunifyResult<()> {
 
 /// Load config from `.prunify.yaml`, merge CLI overrides, load schemes,
 /// and build/populate the command trie.
-fn load_setup(cli: &Cli) -> PrunifyResult<(PrunifyConfig, HashMap<String, Scheme>, CommandTrie)> {
+///
+/// Returns (config, project_schemes, fallback_schemes, trie).
+fn load_setup(
+    cli: &Cli,
+) -> PrunifyResult<(
+    PrunifyConfig,
+    HashMap<String, Scheme>,
+    HashMap<String, Scheme>,
+    CommandTrie,
+)> {
     let config_path = std::path::Path::new(".prunify.yaml");
     let config = ConfigLoader::load(if config_path.exists() {
         Some(config_path)
@@ -63,9 +72,9 @@ fn load_setup(cli: &Cli) -> PrunifyResult<(PrunifyConfig, HashMap<String, Scheme
         config
     };
 
-    let default_dir = default_prunify_dir().join("schemes");
-    let loader = SchemeLoader::new(default_dir.clone());
-    let schemes = loader.load(&config)?;
+    let fallback_dir = default_prunify_dir().join("schemes");
+    let loader = SchemeLoader::new(fallback_dir.clone());
+    let (project_schemes, fallback_schemes) = loader.load(&config)?;
 
     let project_dir: PathBuf = config
         .scheme_dir
@@ -75,16 +84,19 @@ fn load_setup(cli: &Cli) -> PrunifyResult<(PrunifyConfig, HashMap<String, Scheme
             if local.exists() {
                 local
             } else {
-                default_prunify_dir().join("schemes")
+                fallback_dir.clone()
             }
         });
     let trie_path = default_prunify_dir().join("trie.json");
     let rebuild_trie = cli.rebuild_trie
-        || CommandTrie::is_trie_stale(&trie_path, &[&default_dir, &project_dir]);
+        || CommandTrie::is_trie_stale(&trie_path, &[&fallback_dir, &project_dir]);
 
     let trie = if rebuild_trie {
         let mut t = CommandTrie::new();
-        for cmd in schemes.keys() {
+        for cmd in project_schemes.keys() {
+            t.insert(cmd, cmd);
+        }
+        for cmd in fallback_schemes.keys() {
             t.insert(cmd, cmd);
         }
         if let Err(e) = t.save_to_file(&trie_path) {
@@ -96,7 +108,10 @@ fn load_setup(cli: &Cli) -> PrunifyResult<(PrunifyConfig, HashMap<String, Scheme
             Ok(t) => t,
             Err(_e) => {
                 let mut t = CommandTrie::new();
-                for cmd in schemes.keys() {
+                for cmd in project_schemes.keys() {
+                    t.insert(cmd, cmd);
+                }
+                for cmd in fallback_schemes.keys() {
                     t.insert(cmd, cmd);
                 }
                 t
@@ -104,7 +119,7 @@ fn load_setup(cli: &Cli) -> PrunifyResult<(PrunifyConfig, HashMap<String, Scheme
         }
     };
 
-    Ok((config, schemes, trie))
+    Ok((config, project_schemes, fallback_schemes, trie))
 }
 
 /// Execute a command and return its (possibly pruned) output along with the exit code.
@@ -178,8 +193,8 @@ fn execute_and_print(
 /// Interactive bash mode: enter a REPL where each command is executed
 /// and processed through the prunify pipeline.
 fn run_interactive(cli: Cli) -> PrunifyResult<()> {
-    let (config, schemes, trie) = load_setup(&cli)?;
-    let dispatcher = Dispatcher::new(trie, schemes);
+    let (config, project_schemes, fallback_schemes, trie) = load_setup(&cli)?;
+    let dispatcher = Dispatcher::new(trie, project_schemes, fallback_schemes);
 
     let stdin = std::io::stdin();
     loop {

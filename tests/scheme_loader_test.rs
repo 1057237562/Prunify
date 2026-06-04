@@ -14,83 +14,96 @@ fn absent_dir() -> PathBuf {
 
 #[test]
 fn test_load_defaults() {
-    let default_dir = PathBuf::from(FIXTURES_DIR).join("defaults");
-    let loader = SchemeLoader::new(default_dir);
+    let fallback_dir = PathBuf::from(FIXTURES_DIR).join("defaults");
+    let loader = SchemeLoader::new(fallback_dir);
 
     // Explicitly set scheme_dir to an absent dir so we don't accidentally
     // load real schemes from .prunify/schemes/.
     let mut config = PrunifyConfig::default();
     config.scheme_dir = Some(absent_dir());
 
-    let schemes: HashMap<String, Scheme> = loader.load(&config).expect("should load defaults");
-    assert_eq!(schemes.len(), 2, "should load 2 default schemes");
+    let (project, fallback): (HashMap<String, Scheme>, HashMap<String, Scheme>) =
+        loader.load(&config).expect("should load defaults");
+
+    // project_dir = absent_dir() → no project schemes
+    assert!(project.is_empty(), "absent project dir should be empty");
+
+    // fallback_dir = defaults/ → 2 schemes
+    assert_eq!(fallback.len(), 2, "should load 2 fallback schemes");
     assert!(
-        schemes.contains_key("git status"),
+        fallback.contains_key("git status"),
         "should contain 'git status'"
     );
     assert!(
-        schemes.contains_key("git diff"),
+        fallback.contains_key("git diff"),
         "should contain 'git diff'"
     );
 
     // Verify the git status scheme has the default rules (keep action)
-    let git_status = schemes.get("git status").unwrap();
+    let git_status = fallback.get("git status").unwrap();
     assert_eq!(git_status.rules.len(), 1);
     assert!(matches!(git_status.rules[0].action, Action::Keep));
 }
 
 #[test]
 fn test_project_override_replaces_default() {
-    let default_dir = PathBuf::from(FIXTURES_DIR).join("defaults");
+    let fallback_dir = PathBuf::from(FIXTURES_DIR).join("defaults");
     let project_dir = PathBuf::from(FIXTURES_DIR).join("overrides");
-    let loader = SchemeLoader::new(default_dir);
+    let loader = SchemeLoader::new(fallback_dir);
 
     let mut config = PrunifyConfig::default();
     config.scheme_dir = Some(project_dir);
 
-    let schemes: HashMap<String, Scheme> =
+    let (project, fallback): (HashMap<String, Scheme>, HashMap<String, Scheme>) =
         loader.load(&config).expect("should load with overrides");
-    assert_eq!(schemes.len(), 2, "should still have 2 total schemes");
 
-    // git status should come from the override (discard action, not keep)
-    let git_status = schemes.get("git status").unwrap();
+    // project (overrides/) has 1 scheme: git status with Discard
+    assert_eq!(project.len(), 1, "project should have 1 scheme");
+    let git_status = project.get("git status").unwrap();
     assert_eq!(git_status.rules.len(), 1);
     assert!(
         matches!(git_status.rules[0].action, Action::Discard),
         "override should replace git_status rules with Discard action"
     );
 
-    // git diff should still come from defaults (not overridden)
-    let git_diff = schemes.get("git diff").unwrap();
-    assert_eq!(git_diff.rules.len(), 1);
-    assert!(matches!(git_diff.rules[0].action, Action::Keep));
+    // fallback (defaults/) has 2 schemes: git status (Keep) + git diff (Keep)
+    assert_eq!(fallback.len(), 2, "fallback should have 2 schemes");
+    assert!(fallback.contains_key("git status"));
+    assert!(fallback.contains_key("git diff"));
+
+    // The dispatcher will prefer project (Discard) over fallback (Keep)
+    // for "git status", and fall back to fallback (Keep) for "git diff".
 }
 
 #[test]
 fn test_no_project_config_uses_defaults() {
-    let default_dir = PathBuf::from(FIXTURES_DIR).join("defaults");
-    let loader = SchemeLoader::new(default_dir);
+    let fallback_dir = PathBuf::from(FIXTURES_DIR).join("defaults");
+    let loader = SchemeLoader::new(fallback_dir);
 
     // Set scheme_dir to absent dir to isolate from real project schemes
     let mut config = PrunifyConfig::default();
     config.scheme_dir = Some(absent_dir());
 
-    let schemes: HashMap<String, Scheme> = loader.load(&config).expect("should load defaults only");
-    assert_eq!(schemes.len(), 2, "should load 2 default schemes");
-    assert!(schemes.contains_key("git status"));
-    assert!(schemes.contains_key("git diff"));
+    let (project, fallback): (HashMap<String, Scheme>, HashMap<String, Scheme>) =
+        loader.load(&config).expect("should load defaults only");
+
+    assert!(project.is_empty(), "absent project dir should be empty");
+    assert_eq!(fallback.len(), 2, "should load 2 fallback schemes");
+    assert!(fallback.contains_key("git status"));
+    assert!(fallback.contains_key("git diff"));
 }
 
 #[test]
 fn test_empty_scheme_dir() {
-    // Both default and project directories are absent — should return empty map
-    let default_dir = PathBuf::from(FIXTURES_DIR).join("nonexistent");
-    let loader = SchemeLoader::new(default_dir);
+    // Both fallback and project directories are absent — should return empty maps
+    let fallback_dir = PathBuf::from(FIXTURES_DIR).join("nonexistent");
+    let loader = SchemeLoader::new(fallback_dir);
 
     let mut config = PrunifyConfig::default();
     config.scheme_dir = Some(absent_dir());
 
-    let schemes: HashMap<String, Scheme> =
+    let (project, fallback): (HashMap<String, Scheme>, HashMap<String, Scheme>) =
         loader.load(&config).expect("empty dir should not error");
-    assert!(schemes.is_empty(), "no scheme dirs should give empty map");
+    assert!(project.is_empty(), "absent project dir should be empty");
+    assert!(fallback.is_empty(), "absent fallback dir should be empty");
 }
