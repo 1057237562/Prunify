@@ -145,25 +145,28 @@ fn list_known_commands(cli: &Cli) -> PrunifyResult<()> {
     println!("Known commands:");
     println!();
 
-    if !project_cmds.is_empty() {
-        println!("  Local ({}):", project_dir.display());
+    // Always show both sections so the user knows both directories are checked.
+    // Use "(none)" when a section has no commands.
+
+    println!("  Local ({}):", project_dir.display());
+    if project_cmds.is_empty() {
+        println!("    (none)");
+    } else {
         for cmd in &project_cmds {
             println!("    {cmd}");
         }
-        println!();
     }
+    println!();
 
-    if !fallback_cmds.is_empty() {
-        println!("  Global ({}):", fallback_dir.display());
+    println!("  Global ({}):", fallback_dir.display());
+    if fallback_cmds.is_empty() {
+        println!("    (none)");
+    } else {
         for cmd in &fallback_cmds {
             println!("    {cmd}");
         }
-        println!();
     }
-
-    if project_cmds.is_empty() && fallback_cmds.is_empty() {
-        println!("  (no scheme files found)");
-    }
+    println!();
 
     Ok(())
 }
