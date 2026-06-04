@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -11,40 +12,31 @@ use prunify::proxy::{
     CommandExecutor, DispatchMode, Dispatcher, OutputMarker, RecursionGuard, TtyDetector,
     register_handler,
 };
-use prunify::scheme::SchemeLoader;
+use prunify::scheme::{Scheme, SchemeLoader};
 
 fn main() -> PrunifyResult<()> {
-    // Register signal handler for SIGINT forwarding to child processes.
-    // This must be called before any child process is spawned.
     register_handler();
 
     let cli = Cli::parse();
 
-    // Join positional args into command string
-    let command = cli.command.join(" ");
+    // If no command, enter interactive bash mode
+    let command = match cli.command {
+        Some(ref cmd) if !cmd.is_empty() => cmd.clone(),
+        _ => return run_interactive(cli),
+    };
 
-    // Handle empty command (shouldn't happen with clap required=true, but safeguard)
-    if command.trim().is_empty() {
-        eprintln!("prunify: empty command — nothing to proxy");
-        std::process::exit(1);
-    }
+    // Load config, schemes, and trie
+    let (config, schemes, trie) = load_setup(&cli)?;
+    let dispatcher = Dispatcher::new(trie, schemes);
 
-    // 1. Recursion guard
-    if RecursionGuard::is_recursive(&command) {
-        eprintln!("prunify: recursion detected — bypassing proxy");
-        return Ok(());
-    }
+    // Execute single command through the pipeline
+    let exit_code = execute_and_print(&command, &config, &dispatcher, &cli)?;
+    std::process::exit(exit_code);
+}
 
-    // 2. TTY passthrough — interactive commands bypass proxy
-    // Spawn directly with raw args (no sh -c) to preserve quoted arguments.
-    if TtyDetector::should_passthrough(&cli.command[0]) {
-        let status = std::process::Command::new(&cli.command[0])
-            .args(&cli.command[1..])
-            .status()?;
-        std::process::exit(status.code().unwrap_or(1));
-    }
-
-    // 3. Load config
+/// Load config from `.prunify.yaml`, merge CLI overrides, load schemes,
+/// and build/populate the command trie.
+fn load_setup(cli: &Cli) -> PrunifyResult<(PrunifyConfig, HashMap<String, Scheme>, CommandTrie)> {
     let config_path = std::path::Path::new(".prunify.yaml");
     let config = ConfigLoader::load(if config_path.exists() {
         Some(config_path)
@@ -52,10 +44,9 @@ fn main() -> PrunifyResult<()> {
         None
     })?;
 
-    // Merge CLI overrides onto config (if any CLI flag was provided)
     let config = if cli.scheme_dir.is_some() || cli.verbose || cli.strict {
         PrunifyConfig {
-            scheme_dir: cli.scheme_dir.map(PathBuf::from),
+            scheme_dir: cli.scheme_dir.clone().map(PathBuf::from),
             verbose: if cli.verbose {
                 Some(true)
             } else {
@@ -72,12 +63,10 @@ fn main() -> PrunifyResult<()> {
         config
     };
 
-    // 4. Load schemes
     let default_dir = default_prunify_dir().join("schemes");
     let loader = SchemeLoader::new(default_dir.clone());
     let schemes = loader.load(&config)?;
 
-    // 5. Populate trie (cached to ~/.prunify/trie.json for fast startup)
     let project_dir: PathBuf = config
         .scheme_dir
         .clone()
@@ -99,7 +88,6 @@ fn main() -> PrunifyResult<()> {
         match CommandTrie::load_from_file(&trie_path) {
             Ok(t) => t,
             Err(_e) => {
-                // Corrupted or missing cache — rebuild from schemes
                 let mut t = CommandTrie::new();
                 for cmd in schemes.keys() {
                     t.insert(cmd, cmd);
@@ -109,25 +97,48 @@ fn main() -> PrunifyResult<()> {
         }
     };
 
-    // 6. Execute command — pass raw args directly, no join/split round-trip
-    let result = CommandExecutor::execute(&cli.command)?;
+    Ok((config, schemes, trie))
+}
 
-    // 7. Dispatch (mode routing + pruning)
-    // Use lossy string conversion for scheme matching — dispatcher operates on text.
+/// Execute a command and print its (possibly pruned) output.
+/// Returns the exit code of the command.
+fn execute_and_print(
+    args: &[String],
+    _config: &PrunifyConfig,
+    dispatcher: &Dispatcher,
+    cli: &Cli,
+) -> PrunifyResult<i32> {
+    let command_str = args.join(" ");
+
+    // Recursion guard
+    if RecursionGuard::is_recursive(&command_str) {
+        eprintln!("prunify: recursion detected — bypassing proxy");
+        return Ok(0);
+    }
+
+    // TTY passthrough — interactive commands bypass proxy
+    if TtyDetector::should_passthrough(&args[0]) {
+        let status = std::process::Command::new(&args[0])
+            .args(&args[1..])
+            .status()?;
+        return Ok(status.code().unwrap_or(1));
+    }
+
+    // Execute
+    let result = CommandExecutor::execute(args)?;
+
+    // Dispatch (mode routing + pruning)
     let stdout_str = String::from_utf8_lossy(&result.stdout);
-    let dispatcher = Dispatcher::new(trie, schemes);
-    let (pruned, mode) = dispatcher.dispatch(&command, &stdout_str)?;
+    let (pruned, mode) = dispatcher.dispatch(&command_str, &stdout_str)?;
 
-    // 8. Mark output
+    // Mark output
     let tokens = match &mode {
         DispatchMode::PrefixMatch(n) => *n,
         _ => 0,
     };
     let output = OutputMarker::mark_pruned(&pruned, &mode, tokens, cli.no_mark);
 
-    // 9. Print
-    // For --no-mark passthrough, write raw bytes to preserve binary data.
-    // For all other modes, use the string output (pruned/marked as appropriate).
+    // Print
     if cli.no_mark && mode == DispatchMode::Passthrough {
         std::io::stdout().write_all(&result.stdout)?;
     } else {
@@ -137,6 +148,50 @@ fn main() -> PrunifyResult<()> {
         eprint!("{}", result.stderr);
     }
 
-    // 10. Exit with command's exit code
-    std::process::exit(result.exit_code);
+    Ok(result.exit_code)
+}
+
+/// Interactive bash mode: enter a REPL where each command is executed
+/// and processed through the prunify pipeline.
+fn run_interactive(cli: Cli) -> PrunifyResult<()> {
+    let (config, schemes, trie) = load_setup(&cli)?;
+    let dispatcher = Dispatcher::new(trie, schemes);
+
+    let stdin = std::io::stdin();
+    loop {
+        print!("prunify $ ");
+        std::io::stdout().flush()?;
+
+        let mut input = String::new();
+        if stdin.read_line(&mut input)? == 0 {
+            // EOF (Ctrl+D)
+            println!();
+            break;
+        }
+
+        let trimmed = input.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed == "exit" {
+            break;
+        }
+
+        // Split into args by whitespace
+        let args: Vec<String> = trimmed.split_whitespace().map(String::from).collect();
+        if args.is_empty() {
+            continue;
+        }
+
+        // Run through the prunify pipeline, but don't exit on failure
+        let result = execute_and_print(&args, &config, &dispatcher, &cli);
+        match result {
+            Ok(_exit_code) => {}
+            Err(e) => {
+                eprintln!("prunify: error: {e}");
+            }
+        }
+    }
+
+    Ok(())
 }

@@ -8,9 +8,10 @@ use clap::Parser;
     about = "Proxy and prune bash command output"
 )]
 pub struct Cli {
-    /// The command to proxy (everything after prunify's own flags)
-    #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
-    pub command: Vec<String>,
+    /// The command to proxy (everything after prunify's own flags).
+    /// If omitted, prunify enters interactive bash mode.
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub command: Option<Vec<String>>,
 
     /// Custom path to scheme files
     #[arg(long)]
