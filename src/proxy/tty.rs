@@ -1,3 +1,4 @@
+#[cfg(unix)]
 use libc;
 
 /// Detects TTY output and identifies interactive commands that should passthrough unprocessed.
@@ -10,10 +11,17 @@ const INTERACTIVE_COMMANDS: &[&str] = &[
 ];
 
 impl TtyDetector {
-    /// Check if stdout is a TTY (uses libc::isatty on stdout fd).
-    /// Returns false if TTY check fails for any reason.
+    /// Check if stdout is a TTY.
+    /// On Unix, uses libc::isatty. On Windows, returns false (no winapi dependency).
+    #[cfg(unix)]
     pub fn is_tty() -> bool {
         unsafe { libc::isatty(libc::STDOUT_FILENO) != 0 }
+    }
+
+    /// Windows stub: no TTY detection available without winapi.
+    #[cfg(windows)]
+    pub fn is_tty() -> bool {
+        false
     }
 
     /// Check if command should always passthrough (interactive programs).
