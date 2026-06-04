@@ -33,265 +33,242 @@ fn make_keep_column_rule(index: usize) -> Rule {
     }
 }
 
-/// Build a dispatcher with only project schemes (no fallback).
-fn dispatcher_with_project(trie: CommandTrie, project: HashMap<String, Scheme>) -> Dispatcher {
-    Dispatcher::new(trie, project, HashMap::new())
+/// Build a local-only trie and dispatcher (no global/fallback).
+fn local_dispatcher(
+    cmds: &[(&str, &str)],
+    schemes: HashMap<String, Scheme>,
+) -> Dispatcher {
+    let mut local_trie = CommandTrie::new();
+    for (cmd, id) in cmds {
+        local_trie.insert(cmd, id);
+    }
+    Dispatcher::new(local_trie, CommandTrie::new(), schemes, HashMap::new())
 }
 
-/// Build a dispatcher with both project and fallback schemes.
-fn dispatcher_with_both(
-    trie: CommandTrie,
+/// Build a dispatcher with separate local and global tries + maps.
+fn two_tier_dispatcher(
+    local_cmds: &[(&str, &str)],
+    global_cmds: &[(&str, &str)],
     project: HashMap<String, Scheme>,
     fallback: HashMap<String, Scheme>,
 ) -> Dispatcher {
-    Dispatcher::new(trie, project, fallback)
+    let mut local_trie = CommandTrie::new();
+    for (cmd, id) in local_cmds {
+        local_trie.insert(cmd, id);
+    }
+    let mut global_trie = CommandTrie::new();
+    for (cmd, id) in global_cmds {
+        global_trie.insert(cmd, id);
+    }
+    Dispatcher::new(local_trie, global_trie, project, fallback)
 }
 
-#[test]
-fn test_exact_match_applies_scheme_rules() {
-    // Build trie with "git status" → "git-status"
-    let mut trie = CommandTrie::new();
-    trie.insert("git status", "git-status");
-
-    // Build scheme that discards lines containing "total"
-    let scheme = make_scheme("git status", vec![make_discard_regex_rule("total")]);
-    let mut project: HashMap<String, Scheme> = HashMap::new();
-    project.insert("git-status".to_string(), scheme);
-
-    let dispatcher = dispatcher_with_project(trie, project);
-
-    let output = "total 123\nreal data\nmore output\n";
-    let (pruned, mode) = dispatcher.dispatch("git status", output).unwrap();
-
-    assert_eq!(pruned, "real data\nmore output");
-    assert_eq!(mode, DispatchMode::ExactMatch);
-}
+// ── Basic prefix matching (local-only) ───────────────────────────────────────
 
 #[test]
-fn test_prefix_match_applies_scheme_rules() {
-    // Build trie with "git status" → "git-status" (no exact match for "git status --short")
-    let mut trie = CommandTrie::new();
-    trie.insert("git status", "git-status");
+fn test_prefix_match_short_command() {
+    // "git status" in local trie → prefix match with 2 tokens
+    let mut project = HashMap::new();
+    project.insert(
+        "git-status".to_string(),
+        make_scheme("git status", vec![make_discard_regex_rule("total")]),
+    );
 
-    // Build scheme that discards lines containing "total"
-    let scheme = make_scheme("git status", vec![make_discard_regex_rule("total")]);
-    let mut project: HashMap<String, Scheme> = HashMap::new();
-    project.insert("git-status".to_string(), scheme);
+    let d = local_dispatcher(&[("git status", "git-status")], project);
 
-    let dispatcher = dispatcher_with_project(trie, project);
-
-    let output = "total 123\nreal data\nmore output\n";
-    let (pruned, mode) = dispatcher.dispatch("git status --short", output).unwrap();
-
-    assert_eq!(pruned, "real data\nmore output");
+    let (pruned, mode) = d.dispatch("git status", "total 123\nreal data\n").unwrap();
+    assert_eq!(pruned, "real data");
     assert_eq!(mode, DispatchMode::PrefixMatch(2));
 }
 
 #[test]
-fn test_passthrough_returns_unmodified_output() {
-    let trie = CommandTrie::new();
-    let project: HashMap<String, Scheme> = HashMap::new();
+fn test_prefix_match_longer_command() {
+    // "git status --short" also prefix-matches "git status" (2 tokens)
+    let mut project = HashMap::new();
+    project.insert(
+        "git-status".to_string(),
+        make_scheme("git status", vec![make_discard_regex_rule("total")]),
+    );
 
-    let dispatcher = dispatcher_with_project(trie, project);
+    let d = local_dispatcher(&[("git status", "git-status")], project);
 
-    let output = "some random output\nline two\nline three\n";
-    let (pruned, mode) = dispatcher.dispatch("unknown command", output).unwrap();
+    let (pruned, mode) = d.dispatch("git status --short", "total 123\nreal data\n").unwrap();
+    assert_eq!(pruned, "real data");
+    assert_eq!(mode, DispatchMode::PrefixMatch(2));
+}
+
+#[test]
+fn test_passthrough_when_no_match() {
+    let d = local_dispatcher(&[], HashMap::new());
+
+    let output = "some random output\nline two\n";
+    let (pruned, mode) = d.dispatch("unknown command", output).unwrap();
 
     assert_eq!(pruned, output);
     assert_eq!(mode, DispatchMode::Passthrough);
 }
 
 #[test]
-fn test_scheme_not_in_map_falls_through_to_passthrough() {
-    // Trie has "git" → "git-base", but "git-base" is NOT in any scheme map
-    let mut trie = CommandTrie::new();
-    trie.insert("git", "git-base");
+fn test_passthrough_when_scheme_id_not_in_map() {
+    // local_trie has "git" → "git-base", but scheme map is empty
+    let d = local_dispatcher(&[("git", "git-base")], HashMap::new());
 
-    let project: HashMap<String, Scheme> = HashMap::new();
-    let dispatcher = dispatcher_with_project(trie, project);
+    let output = "some data\n";
+    let (pruned, mode) = d.dispatch("git", output).unwrap();
 
-    let output = "some data\nmore data\n";
-    let (pruned, mode) = dispatcher.dispatch("git", output).unwrap();
-
-    // Should fall through to passthrough since scheme_id "git-base" doesn't exist
     assert_eq!(pruned, output);
     assert_eq!(mode, DispatchMode::Passthrough);
 }
 
 #[test]
-fn test_exact_match_takes_priority_over_prefix() {
-    // Trie has "git" → "git-base" and "git status" → "git-status"
-    let mut trie = CommandTrie::new();
-    trie.insert("git", "git-base");
-    trie.insert("git status", "git-status");
+fn test_deepest_prefix_match_wins() {
+    // "git" (1 token) and "git status" (2 tokens) both in local trie.
+    // "git status" is deepest → used.
+    let mut project = HashMap::new();
+    project.insert(
+        "git-base".to_string(),
+        make_scheme("git", vec![make_discard_regex_rule("total")]),
+    );
+    project.insert(
+        "git-status".to_string(),
+        make_scheme("git status", vec![make_discard_regex_rule("summary")]),
+    );
 
-    // "git-base" discards "total" lines, "git-status" discards "summary" lines
-    let git_base_scheme = make_scheme("git", vec![make_discard_regex_rule("total")]);
-    let git_status_scheme = make_scheme("git status", vec![make_discard_regex_rule("summary")]);
-
-    let mut project: HashMap<String, Scheme> = HashMap::new();
-    project.insert("git-base".to_string(), git_base_scheme);
-    project.insert("git-status".to_string(), git_status_scheme);
-
-    let dispatcher = dispatcher_with_project(trie, project);
+    let d = local_dispatcher(&[("git", "git-base"), ("git status", "git-status")], project);
 
     let output = "total 123\nsummary line\nreal data\n";
-    let (pruned, mode) = dispatcher.dispatch("git status", output).unwrap();
+    let (pruned, mode) = d.dispatch("git status", output).unwrap();
 
-    // Should use "git-status" scheme (exact match), not "git-base" (prefix match)
-    // "git-status" discards "summary", so "summary line" should be removed
+    // "git-status" is the deepest prefix match (2 tokens) → discards "summary"
     assert_eq!(pruned, "total 123\nreal data");
-    assert_eq!(mode, DispatchMode::ExactMatch);
+    assert_eq!(mode, DispatchMode::PrefixMatch(2));
 }
 
 #[test]
 fn test_line_parser_then_column_selector_apply_in_order() {
-    // Test that LineParser is applied first, then ColumnSelector
-    let mut trie = CommandTrie::new();
-    trie.insert("ps aux", "ps-aux");
-
-    // Scheme: first discard lines matching "root", then keep only column 0 (PID)
-    let scheme = make_scheme(
-        "ps aux",
-        vec![make_discard_regex_rule("root"), make_keep_column_rule(0)],
+    let mut project = HashMap::new();
+    project.insert(
+        "ps-aux".to_string(),
+        make_scheme(
+            "ps aux",
+            vec![make_discard_regex_rule("root"), make_keep_column_rule(0)],
+        ),
     );
 
-    let mut project: HashMap<String, Scheme> = HashMap::new();
-    project.insert("ps-aux".to_string(), scheme);
-
-    let dispatcher = dispatcher_with_project(trie, project);
+    let d = local_dispatcher(&[("ps aux", "ps-aux")], project);
 
     let output = "root   123  0.0  some\nuser   456  0.1  data\nroot   789  0.2  lines\n";
-    let (pruned, mode) = dispatcher.dispatch("ps aux", output).unwrap();
+    let (pruned, mode) = d.dispatch("ps aux", output).unwrap();
 
-    // LineParser: discard lines containing "root" → leaves "user   456  0.1  data\n"
-    // ColumnSelector: keep only column 0 → "user"
+    // LineParser discards "root" lines → "user   456  0.1  data\n"
+    // ColumnSelector keeps column 0 → "user"
     assert_eq!(pruned, "user");
-    assert_eq!(mode, DispatchMode::ExactMatch);
+    assert_eq!(mode, DispatchMode::PrefixMatch(2));
 }
 
-// ── Two-level fallback tests ─────────────────────────────────────────────────
+// ── Two-level fallback tests (separate local + global tries) ─────────────────
 
 #[test]
-fn test_fallback_exact_match_when_project_has_no_match() {
-    // Command exists only in fallback schemes, not in project.
-    let mut trie = CommandTrie::new();
-    trie.insert("git log", "git-log");
-
-    let project: HashMap<String, Scheme> = HashMap::new();
-
-    let mut fallback: HashMap<String, Scheme> = HashMap::new();
+fn test_fallback_used_when_local_has_no_match() {
+    // local is empty → no match. global has "git log" → used.
+    let mut fallback = HashMap::new();
     fallback.insert(
         "git-log".to_string(),
         make_scheme("git log", vec![make_discard_regex_rule("commit")]),
     );
 
-    let dispatcher = dispatcher_with_both(trie, project, fallback);
+    let d = two_tier_dispatcher(&[], &[("git log", "git-log")], HashMap::new(), fallback);
 
     let output = "commit abc123\nreal data\ncommit def456\n";
-    let (pruned, mode) = dispatcher.dispatch("git log", output).unwrap();
+    let (pruned, mode) = d.dispatch("git log", output).unwrap();
 
-    // Should use fallback scheme — discard lines containing "commit"
     assert_eq!(pruned, "real data");
-    assert_eq!(mode, DispatchMode::ExactMatch);
+    assert_eq!(mode, DispatchMode::PrefixMatch(2));
 }
 
 #[test]
-fn test_project_exact_takes_priority_over_fallback() {
-    // Same command exists in both project and fallback.
-    // Project version should win.
-    let mut trie = CommandTrie::new();
-    trie.insert("git log", "git-log");
-
-    // Project discards "commit" lines
-    let mut project: HashMap<String, Scheme> = HashMap::new();
+fn test_local_takes_priority_over_global() {
+    // Same command in both. Local trie checked first → local scheme wins.
+    let mut project = HashMap::new();
     project.insert(
         "git-log".to_string(),
         make_scheme("git log", vec![make_discard_regex_rule("commit")]),
     );
-
-    // Fallback discards "real" lines
-    let mut fallback: HashMap<String, Scheme> = HashMap::new();
+    let mut fallback = HashMap::new();
     fallback.insert(
         "git-log".to_string(),
         make_scheme("git log", vec![make_discard_regex_rule("real")]),
     );
 
-    let dispatcher = dispatcher_with_both(trie, project, fallback);
-
-    let output = "commit abc123\nreal data\ncommit def456\n";
-    let (pruned, mode) = dispatcher.dispatch("git log", output).unwrap();
-
-    // Project scheme wins → discard "commit" lines, keep "real data"
-    assert_eq!(pruned, "real data");
-    assert_eq!(mode, DispatchMode::ExactMatch);
-}
-
-#[test]
-fn test_fallback_prefix_match_when_project_has_no_match() {
-    // "git log --oneline" not in project, but "git log" is in fallback.
-    let mut trie = CommandTrie::new();
-    trie.insert("git log", "git-log");
-
-    let project: HashMap<String, Scheme> = HashMap::new();
-
-    let mut fallback: HashMap<String, Scheme> = HashMap::new();
-    fallback.insert(
-        "git-log".to_string(),
-        make_scheme("git log", vec![make_discard_regex_rule("commit")]),
+    let d = two_tier_dispatcher(
+        &[("git log", "git-log")],
+        &[("git log", "git-log")],
+        project,
+        fallback,
     );
 
-    let dispatcher = dispatcher_with_both(trie, project, fallback);
+    let output = "commit abc123\nreal data\ncommit def456\n";
+    let (pruned, mode) = d.dispatch("git log", output).unwrap();
 
-    let output = "commit abc123\nreal data\n";
-    let (pruned, mode) = dispatcher.dispatch("git log --oneline", output).unwrap();
-
-    // Should fall back to fallback's prefix match
+    // Local wins → discards "commit" lines
     assert_eq!(pruned, "real data");
     assert_eq!(mode, DispatchMode::PrefixMatch(2));
 }
 
 #[test]
-fn test_fallback_exact_then_project_prefix() {
-    // "git" is in project (exact), "git log" is in fallback (exact).
-    // Searching "git log" should get exact match from fallback, not prefix from project.
-    let mut trie = CommandTrie::new();
-    trie.insert("git", "git-base");
-    trie.insert("git log", "git-log");
-
-    let mut project: HashMap<String, Scheme> = HashMap::new();
-    project.insert(
-        "git-base".to_string(),
-        make_scheme("git", vec![make_discard_regex_rule("total")]),
-    );
-
-    let mut fallback: HashMap<String, Scheme> = HashMap::new();
+fn test_fallback_prefix_match_when_local_empty() {
+    // "git log --oneline" → local empty → global prefix match on "git log"
+    let mut fallback = HashMap::new();
     fallback.insert(
         "git-log".to_string(),
         make_scheme("git log", vec![make_discard_regex_rule("commit")]),
     );
 
-    let dispatcher = dispatcher_with_both(trie, project, fallback);
+    let d = two_tier_dispatcher(&[], &[("git log", "git-log")], HashMap::new(), fallback);
 
-    // "git log" exists only in fallback → exact match from fallback
-    // Fallback discards "commit" lines → "total 123" and "real data" survive
+    let output = "commit abc123\nreal data\n";
+    let (pruned, mode) = d.dispatch("git log --oneline", output).unwrap();
+
+    assert_eq!(pruned, "real data");
+    assert_eq!(mode, DispatchMode::PrefixMatch(2));
+}
+
+#[test]
+fn test_local_prefix_match_takes_priority_over_global() {
+    // Local has "git" (1-token prefix), global has "git log" (2-token).
+    // "git log" is sent. Local "git" is a prefix match → local wins.
+    let mut project = HashMap::new();
+    project.insert(
+        "git-base".to_string(),
+        make_scheme("git", vec![make_discard_regex_rule("total")]),
+    );
+    let mut fallback = HashMap::new();
+    fallback.insert(
+        "git-log".to_string(),
+        make_scheme("git log", vec![make_discard_regex_rule("commit")]),
+    );
+
+    let d = two_tier_dispatcher(
+        &[("git", "git-base")],
+        &[("git log", "git-log")],
+        project,
+        fallback,
+    );
+
     let output = "total 123\ncommit abc123\nreal data\n";
-    let (pruned, mode) = dispatcher.dispatch("git log", output).unwrap();
+    let (pruned, mode) = d.dispatch("git log", output).unwrap();
 
-    assert_eq!(pruned, "total 123\nreal data");
-    assert_eq!(mode, DispatchMode::ExactMatch);
+    // Local "git" prefix matches → discards "total" lines
+    assert_eq!(pruned, "commit abc123\nreal data");
+    assert_eq!(mode, DispatchMode::PrefixMatch(1));
 }
 
 #[test]
 fn test_command_not_in_either_falls_through_to_passthrough() {
-    let trie = CommandTrie::new();
-    let project: HashMap<String, Scheme> = HashMap::new();
-    let fallback: HashMap<String, Scheme> = HashMap::new();
-
-    let dispatcher = dispatcher_with_both(trie, project, fallback);
+    let d = two_tier_dispatcher(&[], &[], HashMap::new(), HashMap::new());
 
     let output = "some random output\n";
-    let (pruned, mode) = dispatcher.dispatch("unknown", output).unwrap();
+    let (pruned, mode) = d.dispatch("unknown", output).unwrap();
 
     assert_eq!(pruned, output);
     assert_eq!(mode, DispatchMode::Passthrough);

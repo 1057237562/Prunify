@@ -18,44 +18,49 @@ pub enum DispatchMode {
 }
 
 /// Routes commands through the trie matcher, applies schemes via line/column parsers,
-/// and dispatches to the correct mode (exact match, prefix match, or passthrough).
+/// and dispatches to the correct mode (prefix match or passthrough).
 ///
-/// Schemes are resolved with a **two-level fallback**:
-/// 1. `project_schemes` — project-local schemes are checked first.
-/// 2. `fallback_schemes` — global schemes from `~/.prunify/schemes/` are tried next.
+/// Schemes are resolved with a **two-level prefix fallback**:
+/// 1. Check the **local trie** (project schemes) — prefix match.
+/// 2. If not found locally, check the **global trie** (`~/.prunify/schemes/`) — prefix match.
 /// 3. If neither has a match, the output passes through unmodified.
+///
+/// Each trie only contains commands from its own source, so prefix matching
+/// never accidentally picks a deeper global match over a shallower local one.
+/// All lookups use prefix matching — even commands matching exactly (all tokens)
+/// are resolved as a prefix match (`PrefixMatch(n)` where n is the total token count).
 pub struct Dispatcher {
-    trie: CommandTrie,
+    local_trie: CommandTrie,
+    global_trie: CommandTrie,
     project_schemes: HashMap<String, Scheme>,
     fallback_schemes: HashMap<String, Scheme>,
 }
 
 impl Dispatcher {
     pub fn new(
-        trie: CommandTrie,
+        local_trie: CommandTrie,
+        global_trie: CommandTrie,
         project_schemes: HashMap<String, Scheme>,
         fallback_schemes: HashMap<String, Scheme>,
     ) -> Self {
         Self {
-            trie,
+            local_trie,
+            global_trie,
             project_schemes,
             fallback_schemes,
         }
     }
 
-    /// Route a command through the dispatcher.
+    /// Route a command through the dispatcher using **prefix matching only**.
     ///
     /// The dispatcher receives already-executed output — it does NOT execute commands.
     ///
     /// Resolution order:
-    /// 1. Exact match in **project** schemes.
-    /// 2. Exact match in **fallback** schemes.
-    /// 3. Prefix match in **project** schemes.
-    /// 4. Prefix match in **fallback** schemes.
-    /// 5. Passthrough — no scheme found.
+    /// 1. Prefix match in **local** trie → project schemes.
+    /// 2. Prefix match in **global** trie → fallback schemes.
+    /// 3. Passthrough — no scheme found.
     ///
     /// Returns (pruned_output, dispatch_mode) where:
-    /// - ExactMatch: trie found an exact match, scheme rules applied
     /// - PrefixMatch: trie found a prefix match, scheme rules applied
     /// - Passthrough: no match found, output returned unchanged
     pub fn dispatch(
@@ -63,39 +68,23 @@ impl Dispatcher {
         command: &str,
         raw_output: &str,
     ) -> PrunifyResult<(String, DispatchMode)> {
-        // Level 1: Exact match in project schemes
-        if let Some(scheme_id) = self.trie.search_exact(command)
-            && let Some(scheme) = self.project_schemes.get(scheme_id)
-        {
-            let pruned = self.apply_scheme(raw_output, scheme)?;
-            return Ok((pruned, DispatchMode::ExactMatch));
-        }
-
-        // Level 2: Exact match in fallback schemes
-        if let Some(scheme_id) = self.trie.search_exact(command)
-            && let Some(scheme) = self.fallback_schemes.get(scheme_id)
-        {
-            let pruned = self.apply_scheme(raw_output, scheme)?;
-            return Ok((pruned, DispatchMode::ExactMatch));
-        }
-
-        // Level 3: Prefix match in project schemes
-        if let Some((scheme_id, tokens)) = self.trie.search_prefix(command)
+        // Level 1: Prefix match in LOCAL trie → project schemes
+        if let Some((scheme_id, tokens)) = self.local_trie.search_prefix(command)
             && let Some(scheme) = self.project_schemes.get(scheme_id)
         {
             let pruned = self.apply_scheme(raw_output, scheme)?;
             return Ok((pruned, DispatchMode::PrefixMatch(tokens)));
         }
 
-        // Level 4: Prefix match in fallback schemes
-        if let Some((scheme_id, tokens)) = self.trie.search_prefix(command)
+        // Level 2: Prefix match in GLOBAL trie → fallback schemes
+        if let Some((scheme_id, tokens)) = self.global_trie.search_prefix(command)
             && let Some(scheme) = self.fallback_schemes.get(scheme_id)
         {
             let pruned = self.apply_scheme(raw_output, scheme)?;
             return Ok((pruned, DispatchMode::PrefixMatch(tokens)));
         }
 
-        // Level 5: Passthrough — no match found anywhere
+        // Level 3: Passthrough — no match found anywhere
         Ok((raw_output.to_string(), DispatchMode::Passthrough))
     }
 

@@ -30,25 +30,35 @@ fn main() -> PrunifyResult<()> {
         _ => return run_interactive(cli),
     };
 
-    // Load config, schemes, and trie
-    let (config, project_schemes, fallback_schemes, trie) = load_setup(&cli)?;
-    let dispatcher = Dispatcher::new(trie, project_schemes, fallback_schemes);
+    // Load config, schemes, and tries
+    let (config, project_schemes, fallback_schemes, local_trie, global_trie) = load_setup(&cli)?;
+    let dispatcher = Dispatcher::new(local_trie, global_trie, project_schemes, fallback_schemes);
 
     // Execute single command through the pipeline
     let exit_code = execute_and_print(&command, &config, &dispatcher, &cli)?;
     std::process::exit(exit_code);
 }
 
+/// Helper: build a `CommandTrie` from the keys of a scheme map.
+fn build_trie(schemes: &HashMap<String, Scheme>) -> CommandTrie {
+    let mut t = CommandTrie::new();
+    for cmd in schemes.keys() {
+        t.insert(cmd, cmd);
+    }
+    t
+}
+
 /// Load config from `.prunify.yaml`, merge CLI overrides, load schemes,
-/// and build/populate the command trie.
+/// and build separate tries for local and global schemes.
 ///
-/// Returns (config, project_schemes, fallback_schemes, trie).
+/// Returns (config, project_schemes, fallback_schemes, local_trie, global_trie).
 fn load_setup(
     cli: &Cli,
 ) -> PrunifyResult<(
     PrunifyConfig,
     HashMap<String, Scheme>,
     HashMap<String, Scheme>,
+    CommandTrie,
     CommandTrie,
 )> {
     let config_path = std::path::Path::new(".prunify.yaml");
@@ -81,50 +91,13 @@ fn load_setup(
     let loader = SchemeLoader::new(fallback_dir.clone());
     let (project_schemes, fallback_schemes) = loader.load(&config)?;
 
-    let project_dir: PathBuf = config
-        .scheme_dir
-        .clone()
-        .unwrap_or_else(|| {
-            let local = PathBuf::from(".prunify").join("schemes");
-            if local.exists() {
-                local
-            } else {
-                fallback_dir.clone()
-            }
-        });
-    let trie_path = default_prunify_dir().join("trie.json");
-    let rebuild_trie = cli.rebuild_trie
-        || CommandTrie::is_trie_stale(&trie_path, &[&fallback_dir, &project_dir]);
+    // Build separate tries — local trie only has project commands,
+    // global trie only has fallback commands. This ensures prefix
+    // matching never picks a deeper global match over a local one.
+    let local_trie = build_trie(&project_schemes);
+    let global_trie = build_trie(&fallback_schemes);
 
-    let trie = if rebuild_trie {
-        let mut t = CommandTrie::new();
-        for cmd in project_schemes.keys() {
-            t.insert(cmd, cmd);
-        }
-        for cmd in fallback_schemes.keys() {
-            t.insert(cmd, cmd);
-        }
-        if let Err(e) = t.save_to_file(&trie_path) {
-            eprintln!("prunify: warning: failed to cache trie: {e}");
-        }
-        t
-    } else {
-        match CommandTrie::load_from_file(&trie_path) {
-            Ok(t) => t,
-            Err(_e) => {
-                let mut t = CommandTrie::new();
-                for cmd in project_schemes.keys() {
-                    t.insert(cmd, cmd);
-                }
-                for cmd in fallback_schemes.keys() {
-                    t.insert(cmd, cmd);
-                }
-                t
-            }
-        }
-    };
-
-    Ok((config, project_schemes, fallback_schemes, trie))
+    Ok((config, project_schemes, fallback_schemes, local_trie, global_trie))
 }
 
 /// List all known commands grouped by source (project-local vs global fallback).
@@ -266,8 +239,8 @@ fn execute_and_print(
 /// Interactive bash mode: enter a REPL where each command is executed
 /// and processed through the prunify pipeline.
 fn run_interactive(cli: Cli) -> PrunifyResult<()> {
-    let (config, project_schemes, fallback_schemes, trie) = load_setup(&cli)?;
-    let dispatcher = Dispatcher::new(trie, project_schemes, fallback_schemes);
+    let (config, project_schemes, fallback_schemes, local_trie, global_trie) = load_setup(&cli)?;
+    let dispatcher = Dispatcher::new(local_trie, global_trie, project_schemes, fallback_schemes);
 
     let stdin = std::io::stdin();
     loop {

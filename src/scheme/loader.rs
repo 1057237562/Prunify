@@ -30,10 +30,11 @@ impl SchemeLoader {
     ///    - `config.scheme_dir` if set,
     ///    - otherwise `.prunify/schemes/` if it exists (project-local bundled schemes),
     ///    - otherwise `~/.prunify/schemes/`.
-    /// 2. Loads `.json` scheme files from the **project** directory into `project_schemes`.
+    /// 2. Loads `.json` scheme files from the **project** directory into `project_schemes`
+    ///    *only if it is a different directory* from the fallback dir.
     /// 3. Loads `.json` scheme files from the **fallback** directory (`~/.prunify/schemes/`)
-    ///    *only if it is a different directory* from the project dir — avoiding
-    ///    double-loading.
+    ///    into `fallback_schemes`. Commands already in `project_schemes` are excluded
+    ///    (project takes priority).
     ///
     /// Missing or empty directories are skipped (not an error).
     pub fn load(
@@ -44,6 +45,7 @@ impl SchemeLoader {
         HashMap<String, Scheme>,
     )> {
         let mut project_schemes = HashMap::new();
+        let mut fallback_schemes = HashMap::new();
 
         // Determine project scheme directory
         let project_dir = config
@@ -61,17 +63,22 @@ impl SchemeLoader {
                 }
             });
 
-        // Load project-level schemes
-        let loaded = SchemeStorage::load_all(&project_dir)?;
-        for s in loaded {
-            project_schemes.insert(s.command.clone(), s);
+        // Load project-level schemes only if the dir is distinct from fallback.
+        // When they are the same it means there is no local schemes directory,
+        // so everything should come from the fallback.
+        if project_dir != self.fallback_dir {
+            let loaded = SchemeStorage::load_all(&project_dir)?;
+            for s in loaded {
+                project_schemes.insert(s.command.clone(), s);
+            }
         }
 
-        // Load fallback schemes only if the directory differs from project dir
-        let mut fallback_schemes = HashMap::new();
-        if self.fallback_dir != project_dir {
-            let loaded = SchemeStorage::load_all(&self.fallback_dir)?;
-            for s in loaded {
+        // Always load fallback schemes from ~/.prunify/schemes/.
+        // Commands that already exist in project_schemes are skipped so that
+        // project-level schemes take priority during two-level dispatch.
+        let loaded = SchemeStorage::load_all(&self.fallback_dir)?;
+        for s in loaded {
+            if !project_schemes.contains_key(&s.command) {
                 fallback_schemes.insert(s.command.clone(), s);
             }
         }

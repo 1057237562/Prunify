@@ -66,13 +66,17 @@ fn test_project_override_replaces_default() {
         "override should replace git_status rules with Discard action"
     );
 
-    // fallback (defaults/) has 2 schemes: git status (Keep) + git diff (Keep)
-    assert_eq!(fallback.len(), 2, "fallback should have 2 schemes");
-    assert!(fallback.contains_key("git status"));
-    assert!(fallback.contains_key("git diff"));
+    // fallback (defaults/) has 1 scheme: only git diff (Keep).
+    // git status is excluded because project already has it (project takes priority).
+    assert_eq!(fallback.len(), 1, "fallback should have 1 scheme (git status excluded)");
+    assert!(fallback.contains_key("git diff"), "fallback should still contain 'git diff'");
+    assert!(
+        !fallback.contains_key("git status"),
+        "fallback should NOT contain 'git status' (project has it)"
+    );
 
-    // The dispatcher will prefer project (Discard) over fallback (Keep)
-    // for "git status", and fall back to fallback (Keep) for "git diff".
+    // The dispatcher will prefer project (Discard) over fallback for "git status",
+    // and fall back to fallback (Keep) for "git diff".
 }
 
 #[test]
