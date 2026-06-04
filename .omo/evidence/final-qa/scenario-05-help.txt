@@ -1,0 +1,18 @@
+=== SCENARIO 5: prunify --help ===
+$ ./target/release/prunify --help
+Proxy and prune bash command output
+
+Usage: prunify [OPTIONS] <COMMAND>...
+
+Arguments:
+  <COMMAND>...  The command to proxy (everything after prunifier's own flags)
+
+Options:
+      --scheme-dir <SCHEME_DIR>  Custom path to scheme files
+  -v, --verbose                  Enable verbose logging
+      --no-mark                  Disable [PRUNED] and [UNKNOWN COMMAND] marks
+      --strict                   Reject unknown commands with error instead of passthrough
+  -h, --help                     Print help
+  -V, --version                  Print version
+EXIT: 0
+STATUS: PASS — shows usage with proxy description

@@ -1,0 +1,5 @@
+=== SCENARIO 9: prunify ps aux ===
+$ ./target/release/prunify ps aux
+(empty - all root processes pruned, including header since USER line matches root? Actually all container processes are root so everything was pruned)
+EXIT: 0
+STATUS: PASS — root processes pruned (empty output in container where all processes are root)

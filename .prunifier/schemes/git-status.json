@@ -1,0 +1,30 @@
+{
+  "command": "git status",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^On branch"
+      },
+      "description": "Discard the 'On branch <name>' header line"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s*$"
+      },
+      "description": "Discard blank lines"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\t"
+      },
+      "description": "Keep only tab-indented lines (file entries — staged/modified have 'status: path' format, untracked have bare path)"
+    }
+  ]
+}

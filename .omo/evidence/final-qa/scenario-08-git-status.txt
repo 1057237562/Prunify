@@ -1,0 +1,13 @@
+=== SCENARIO 8: prunify git status ===
+$ ./target/release/prunify git status
+.gitignore
+.omo/
+.opencode/
+.prunifier/
+Cargo.lock
+Cargo.toml
+SCHEMA.md
+src/
+tests/
+EXIT: 0
+STATUS: PASS — "On branch" headers pruned, clean file list

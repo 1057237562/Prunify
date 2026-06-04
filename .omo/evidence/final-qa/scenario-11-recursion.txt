@@ -1,0 +1,5 @@
+=== SCENARIO 11: prunify prunify echo hello ===
+$ ./target/release/prunify prunify echo hello
+prunifier: recursion detected — bypassing proxy
+EXIT: 0
+STATUS: PASS — recursion guard activates, bypasses proxy

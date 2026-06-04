@@ -1,0 +1,5 @@
+=== SCENARIO 4: prunify --version ===
+$ ./target/release/prunify --version
+prunifier 0.1.0
+EXIT: 0
+STATUS: PASS — shows version

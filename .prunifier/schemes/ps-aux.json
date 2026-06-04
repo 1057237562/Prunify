@@ -1,0 +1,32 @@
+{
+  "command": "ps aux",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "LineNumber",
+        "lines": [1]
+      },
+      "description": "Discard the header row (USER, PID, %CPU, %MEM, VSZ, RSS, TTY, STAT, START, TIME, COMMAND)"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Column",
+        "index": 1,
+        "pattern": ".*"
+      },
+      "description": "Keep PID column (column 1, zero-indexed)"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Column",
+        "index": 10,
+        "pattern": ".*"
+      },
+      "description": "Keep COMMAND column (column 10, zero-indexed)"
+    }
+  ]
+}

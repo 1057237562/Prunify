@@ -1,0 +1,7 @@
+=== SCENARIO 2: prunify echo hello ===
+$ ./target/release/prunify echo hello
+hello
+
+[UNKNOWN COMMAND] (no scheme found — output is raw)
+EXIT: 0
+STATUS: PASS — "hello" output with [UNKNOWN COMMAND] mark

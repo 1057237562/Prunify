@@ -1,0 +1,16 @@
+=== SCENARIO 7: prunify ls -la --color=auto ===
+$ ./target/release/prunify ls -la --color=auto
+-rw-r--r-- 1 root root 11658 Jun 4 15:14 Cargo.lock
+-rw-r--r-- 1 root root 279 Jun 4 15:14 Cargo.toml
+drwxr-xr-x 6 root root 4096 Jun 4 14:28 .git
+-rw-r--r-- 1 root root 8 Jun 4 14:16 .gitignore
+drwxr-xr-x 7 root root 4096 Jun 4 14:16 .omo
+drwxr-xr-x 3 root root 4096 Jun 4 15:12 .opencode
+drwxr-xr-x 3 root root 4096 Jun 4 14:16 .prunifier
+-rw-r--r-- 1 root root 9068 Jun 4 14:17 SCHEMA.md
+drwxr-xr-x 6 root root 4096 Jun 4 15:04 src
+drwxr-xr-x 5 root root 4096 Jun 4 14:31 target
+drwxr-xr-x 4 root root 4096 Jun 4 15:15 tests
+[PRUNED] (prefix match: 2 tokens — scheme may be suboptimal)
+EXIT: 0
+STATUS: PASS — [PRUNED] mark present (prefix match)

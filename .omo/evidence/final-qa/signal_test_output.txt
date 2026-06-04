@@ -1,0 +1,9 @@
+
+=== prunifier signal forwarding test ===
+
+[UNKNOWN COMMAND] (no scheme found — output is raw)
+[32m  PASS: [1] SIGINT forwarded — child exited in <10s[0m
+[32m  PASS: [2] normal execution unaffected by signal handler[0m
+
+=== results: 2 passed, 0 failed ===
+EXIT: 0

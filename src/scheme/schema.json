@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://prunifier.dev/schemes/v1/scheme.json",
+  "title": "Prunifier Scheme",
+  "description": "A line-based output pruning scheme for prunifier — defines rules to keep or discard lines from command output.",
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "string",
+      "description": "The shell command whose output this scheme prunes (e.g. \"ls -la\", \"git status\", \"ps aux\")"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version. Must be 1 (line-based selectors only; AST-based selectors are v2+)."
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Rule"
+      },
+      "description": "Ordered list of pruning rules applied sequentially. A line is included if no rule discards it."
+    }
+  },
+  "required": [
+    "command",
+    "version",
+    "rules"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "Rule": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "keep",
+            "discard"
+          ],
+          "description": "\"keep\": drop lines that do NOT match the condition. \"discard\": drop lines that DO match the condition."
+        },
+        "match_condition": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/RegexCondition"
+            },
+            {
+              "$ref": "#/definitions/ColumnCondition"
+            },
+            {
+              "$ref": "#/definitions/LineNumberCondition"
+            }
+          ],
+          "description": "The condition that determines which lines match this rule."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional human-readable explanation of what this rule does."
+        }
+      },
+      "required": [
+        "action",
+        "match_condition"
+      ],
+      "additionalProperties": false
+    },
+    "RegexCondition": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "Regex"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "A regular expression to match against each line of output."
+        }
+      },
+      "required": [
+        "type",
+        "pattern"
+      ],
+      "additionalProperties": false
+    },
+    "ColumnCondition": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "Column"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based column index in tabular output (whitespace-split)."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "A regular expression to match against the extracted column value."
+        }
+      },
+      "required": [
+        "type",
+        "index",
+        "pattern"
+      ],
+      "additionalProperties": false
+    },
+    "LineNumberCondition": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "LineNumber"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "description": "One or more 1-based line numbers to match."
+        }
+      },
+      "required": [
+        "type",
+        "lines"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

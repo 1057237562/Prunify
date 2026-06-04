@@ -1,0 +1,38 @@
+{
+  "command": "ls -la",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^total\\s"
+      },
+      "description": "Discard the 'total N' block count line at the top of ls -la output"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "\\.$"
+      },
+      "description": "Discard the current directory (.) entry"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "\\.\\.$"
+      },
+      "description": "Discard the parent directory (..) entry"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all remaining lines (file and directory entries)"
+    }
+  ]
+}

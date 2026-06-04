@@ -1,0 +1,34 @@
+
+=== prunifier shell tests ===
+
+[32m  PASS: [1] ls -la exact match — total / ./.. pruned[0m
+[32m  PASS: [2] git status exact match — 'On branch' pruned[0m
+[32m  PASS: [3] prefix match — [PRUNED] mark present[0m
+[32m  PASS: [4] unknown command — [UNKNOWN COMMAND] mark present[0m
+[32m  PASS: [5] exit code propagation — exit 1 from false[0m
+[32m  PASS: [6] recursion guard — recursion detected[0m
+[32m  PASS: [7] --no-mark — no [UNKNOWN COMMAND][0m
+[32m  PASS: [8] --version — shows prunifier 0.1.0[0m
+[32m  PASS: [9] --help — usage text displayed[0m
+[32m  PASS: [10] --scheme-dir — custom path prunes output[0m
+[32m  PASS: [11] ps aux — no root processes in output[0m
+[32m  PASS: [12] stderr passthrough — error message present[0m
+[32m  PASS: [13] exact match — no marks appended[0m
+[32m  PASS: [14] no args — error and non-zero exit[0m
+[32m  PASS: [15] binary passthrough — byte-identical output[0m
+[32m  PASS: [16] ANSI passthrough — escape sequences preserved[0m
+[32m  PASS: [17] unicode passthrough — characters preserved[0m
+[32m  PASS: [18] large output — 5000 lines preserved[0m
+[32m  PASS: [19] empty output — stdout empty, exit 0[0m
+
+=== prunifier signal forwarding test ===
+
+[UNKNOWN COMMAND] (no scheme found — output is raw)
+[32m  PASS: [1] SIGINT forwarded — child exited in <10s[0m
+[32m  PASS: [2] normal execution unaffected by signal handler[0m
+
+=== results: 2 passed, 0 failed ===
+[32m  PASS: [20] signal integration — signal_test.sh passes[0m
+
+=== results: 20 passed, 0 failed ===
+EXIT: 0

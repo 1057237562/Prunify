@@ -1,0 +1,167 @@
+{
+  "schema_version": 2,
+  "active_work_id": "prunifier-skill-and-proxy-8013b886",
+  "works": {
+    "prunifier-skill-and-proxy-8013b886": {
+      "work_id": "prunifier-skill-and-proxy-8013b886",
+      "active_plan": "/root/prunifier/.omo/plans/prunifier-skill-and-proxy.md",
+      "plan_name": "prunifier-skill-and-proxy",
+      "status": "completed",
+      "started_at": "2026-06-04T06:15:22.010Z",
+      "updated_at": "2026-06-04T07:38:46.571Z",
+      "session_ids": [
+        "opencode:ses_16f25c71fffeif20xDuUajuIpp"
+      ],
+      "session_origins": {
+        "opencode:ses_16f25c71fffeif20xDuUajuIpp": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {
+        "todo:1": {
+          "task_key": "todo:1",
+          "task_label": "1",
+          "task_title": "Project scaffolding + Cargo init",
+          "session_id": "opencode:ses_16eb9ded5ffegP8lyGZRHVSry6",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-04T06:19:45.060Z",
+          "started_at": "2026-06-04T06:18:58.901Z",
+          "status": "completed",
+          "ended_at": "2026-06-04T06:19:45.059Z",
+          "elapsed_ms": 46158
+        },
+        "todo:5": {
+          "task_key": "todo:5",
+          "task_label": "5",
+          "task_title": "Scheme data types (Rust structs + serde)",
+          "session_id": "opencode:ses_16eb6145dffeNxzDNizSZjTASQ",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "updated_at": "2026-06-04T06:25:50.846Z",
+          "started_at": "2026-06-04T06:23:05.017Z",
+          "status": "completed",
+          "ended_at": "2026-06-04T06:25:50.845Z",
+          "elapsed_ms": 165828
+        },
+        "todo:8": {
+          "task_key": "todo:8",
+          "task_label": "8",
+          "task_title": "Trie matcher module (TDD: insert + search)",
+          "session_id": "opencode:ses_16eb07fefffe9soqIBK6B5fX16",
+          "agent": "Sisyphus-Junior",
+          "category": "deep",
+          "updated_at": "2026-06-04T06:28:53.352Z",
+          "started_at": "2026-06-04T06:28:53.352Z",
+          "status": "running"
+        },
+        "todo:30": {
+          "task_key": "todo:30",
+          "task_label": "30",
+          "task_title": "Final integration test suite (all modes + all edge cases)",
+          "session_id": "opencode:ses_16e7c2b2fffeoi3iWvJA2GXNbi",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-04T07:28:11.654Z",
+          "started_at": "2026-06-04T07:27:54.927Z",
+          "status": "completed",
+          "ended_at": "2026-06-04T07:28:11.622Z",
+          "elapsed_ms": 16695
+        },
+        "final-wave:f1": {
+          "task_key": "final-wave:f1",
+          "task_label": "F1",
+          "task_title": "**Plan Compliance Audit** — `oracle`",
+          "session_id": "opencode:ses_16e6fd86effezu8StIoTSRiLme",
+          "agent": "Sisyphus-Junior",
+          "category": "quick",
+          "started_at": "2026-06-04T07:29:42.628Z",
+          "status": "completed",
+          "updated_at": "2026-06-04T07:38:30.114Z",
+          "ended_at": "2026-06-04T07:38:30.114Z",
+          "elapsed_ms": 527486
+        }
+      },
+      "ended_at": "2026-06-04T07:38:46.571Z",
+      "elapsed_ms": 5004561
+    }
+  },
+  "active_plan": "/root/prunifier/.omo/plans/prunifier-skill-and-proxy.md",
+  "started_at": "2026-06-04T06:15:22.010Z",
+  "status": "completed",
+  "updated_at": "2026-06-04T07:38:46.571Z",
+  "session_ids": [
+    "opencode:ses_16f25c71fffeif20xDuUajuIpp"
+  ],
+  "session_origins": {
+    "opencode:ses_16f25c71fffeif20xDuUajuIpp": "direct"
+  },
+  "plan_name": "prunifier-skill-and-proxy",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Project scaffolding + Cargo init",
+      "session_id": "opencode:ses_16eb9ded5ffegP8lyGZRHVSry6",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-06-04T06:19:45.060Z",
+      "started_at": "2026-06-04T06:18:58.901Z",
+      "status": "completed",
+      "ended_at": "2026-06-04T06:19:45.059Z",
+      "elapsed_ms": 46158
+    },
+    "todo:5": {
+      "task_key": "todo:5",
+      "task_label": "5",
+      "task_title": "Scheme data types (Rust structs + serde)",
+      "session_id": "opencode:ses_16eb6145dffeNxzDNizSZjTASQ",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-06-04T06:25:50.846Z",
+      "started_at": "2026-06-04T06:23:05.017Z",
+      "status": "completed",
+      "ended_at": "2026-06-04T06:25:50.845Z",
+      "elapsed_ms": 165828
+    },
+    "todo:8": {
+      "task_key": "todo:8",
+      "task_label": "8",
+      "task_title": "Trie matcher module (TDD: insert + search)",
+      "session_id": "opencode:ses_16eb07fefffe9soqIBK6B5fX16",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-06-04T06:28:53.352Z",
+      "started_at": "2026-06-04T06:28:53.352Z",
+      "status": "running"
+    },
+    "todo:30": {
+      "task_key": "todo:30",
+      "task_label": "30",
+      "task_title": "Final integration test suite (all modes + all edge cases)",
+      "session_id": "opencode:ses_16e7c2b2fffeoi3iWvJA2GXNbi",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-06-04T07:28:11.654Z",
+      "started_at": "2026-06-04T07:27:54.927Z",
+      "status": "completed",
+      "ended_at": "2026-06-04T07:28:11.622Z",
+      "elapsed_ms": 16695
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "opencode:ses_16e6fd86effezu8StIoTSRiLme",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "started_at": "2026-06-04T07:29:42.628Z",
+      "status": "completed",
+      "updated_at": "2026-06-04T07:38:30.114Z",
+      "ended_at": "2026-06-04T07:38:30.114Z",
+      "elapsed_ms": 527486
+    }
+  },
+  "agent": "atlas",
+  "ended_at": "2026-06-04T07:38:46.571Z",
+  "elapsed_ms": 5004561
+}

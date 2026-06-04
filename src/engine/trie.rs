@@ -1,0 +1,132 @@
+use std::collections::HashMap;
+
+#[derive(Debug, Default)]
+pub struct CommandTrie {
+    root: TrieNode,
+}
+
+#[derive(Debug, Default)]
+struct TrieNode {
+    children: HashMap<String, TrieNode>,
+    scheme_id: Option<String>,
+}
+
+impl CommandTrie {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Insert a command with its scheme_id. Tokenizes on whitespace.
+    /// e.g., insert("git status", "git-status")
+    pub fn insert(&mut self, command: &str, scheme_id: &str) {
+        let mut node = &mut self.root;
+        for token in command.split_whitespace() {
+            node = node.children.entry(token.to_string()).or_default();
+        }
+        node.scheme_id = Some(scheme_id.to_string());
+    }
+
+    /// Exact match — command must match exactly.
+    /// Returns Some(scheme_id) on match, None otherwise.
+    pub fn search_exact(&self, command: &str) -> Option<&str> {
+        let mut node = &self.root;
+        for token in command.split_whitespace() {
+            match node.children.get(token) {
+                Some(child) => node = child,
+                None => return None,
+            }
+        }
+        node.scheme_id.as_deref()
+    }
+
+    /// Longest common prefix match.
+    /// Returns Some((scheme_id, matched_token_count)) or None.
+    /// e.g., search_prefix("git status --short") with only "git status" in trie
+    /// returns Some(("git-status", 2))
+    pub fn search_prefix(&self, command: &str) -> Option<(&str, usize)> {
+        let mut node = &self.root;
+        let mut best: Option<(&str, usize)> = None;
+        let mut depth = 0usize;
+
+        for token in command.split_whitespace() {
+            match node.children.get(token) {
+                Some(child) => {
+                    node = child;
+                    depth += 1;
+                    if let Some(ref id) = node.scheme_id {
+                        best = Some((id.as_str(), depth));
+                    }
+                }
+                None => break,
+            }
+        }
+
+        best
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_insert_and_exact_match() {
+        let mut trie = CommandTrie::new();
+        trie.insert("git status", "git-status");
+        assert_eq!(trie.search_exact("git status"), Some("git-status"));
+    }
+
+    #[test]
+    fn test_prefix_match() {
+        let mut trie = CommandTrie::new();
+        trie.insert("git status", "git-status");
+        let result = trie.search_prefix("git status --short");
+        assert_eq!(result, Some(("git-status", 2)));
+    }
+
+    #[test]
+    fn test_no_match() {
+        let mut trie = CommandTrie::new();
+        trie.insert("git status", "git-status");
+        assert_eq!(trie.search_exact("git log"), None);
+        assert_eq!(trie.search_prefix("git log"), None);
+    }
+
+    #[test]
+    fn test_longest_prefix() {
+        let mut trie = CommandTrie::new();
+        trie.insert("git", "git-base");
+        trie.insert("git status", "git-status");
+        // Should match the deepest prefix (git status = 2 tokens) over shallow (git = 1 token)
+        let result = trie.search_prefix("git status --short");
+        assert_eq!(result, Some(("git-status", 2)));
+        // But "git" alone should still match the single-token entry
+        assert_eq!(trie.search_exact("git"), Some("git-base"));
+    }
+
+    #[test]
+    fn test_multiple_commands() {
+        let mut trie = CommandTrie::new();
+        trie.insert("git status", "git-status");
+        trie.insert("git log", "git-log");
+        trie.insert("git commit", "git-commit");
+        trie.insert("ls", "ls-base");
+
+        assert_eq!(trie.search_exact("git status"), Some("git-status"));
+        assert_eq!(trie.search_exact("git log"), Some("git-log"));
+        assert_eq!(trie.search_exact("git commit"), Some("git-commit"));
+        assert_eq!(trie.search_exact("ls"), Some("ls-base"));
+        assert_eq!(trie.search_exact("git"), None);
+
+        // Prefix match on "git commit --amend -m msg" should match "git commit"
+        let result = trie.search_prefix("git commit --amend -m msg");
+        assert_eq!(result, Some(("git-commit", 2)));
+    }
+
+    #[test]
+    fn test_empty_trie() {
+        let trie = CommandTrie::new();
+        assert_eq!(trie.search_exact("anything"), None);
+        assert_eq!(trie.search_prefix("anything"), None);
+    }
+}

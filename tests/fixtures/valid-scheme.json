@@ -1,0 +1,22 @@
+{
+  "command": "git status",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Column",
+        "index": 0,
+        "pattern": "(modified|new file|deleted):"
+      }
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Column",
+        "index": 1,
+        "pattern": ".*"
+      }
+    }
+  ]
+}

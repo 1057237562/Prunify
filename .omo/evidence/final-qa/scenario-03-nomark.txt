@@ -1,0 +1,5 @@
+=== SCENARIO 3: prunify --no-mark echo hello ===
+$ ./target/release/prunify --no-mark echo hello
+hello
+EXIT: 0
+STATUS: PASS — "hello" output without any marks

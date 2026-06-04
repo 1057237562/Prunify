@@ -1,0 +1,6 @@
+=== SCENARIO 10: prunify sh -c "exit 42" ===
+$ ./target/release/prunify sh -c 'exit 42'; echo "EXIT: $?"
+[UNKNOWN COMMAND] (no scheme found — output is raw)
+EXIT: 0
+STATUS: FAIL — expected exit code 42, got 0.
+Exit code propagation broken for unknown (passthrough) commands.

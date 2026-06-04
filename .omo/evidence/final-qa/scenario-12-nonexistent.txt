@@ -1,0 +1,6 @@
+=== SCENARIO 12: prunify ls /nonexistent ===
+$ ./target/release/prunify ls /nonexistent 2>&1
+[UNKNOWN COMMAND] (no scheme found — output is raw)
+ls: cannot access '/nonexistent': No such file or directory
+EXIT: 2
+STATUS: PASS — error on stderr, non-zero exit code (2)
