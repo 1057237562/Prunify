@@ -23,7 +23,7 @@ impl SchemeLoader {
     ///
     /// 1. Loads all `.json` scheme files from `self.default_dir`.
     /// 2. Loads all `.json` scheme files from the project override directory
-    ///    (determined by `config.scheme_dir` or default `".prunify/schemes/"`).
+    ///    (determined by `config.scheme_dir` or default `"~/.prunify/schemes/"`).
     /// 3. Project schemes override defaults with the same `command` key.
     ///
     /// Missing or empty directories are skipped (not an error).
@@ -40,7 +40,7 @@ impl SchemeLoader {
         let project_dir = config
             .scheme_dir
             .clone()
-            .unwrap_or_else(|| PathBuf::from(".prunify/schemes/"));
+            .unwrap_or_else(|| crate::config::default_prunify_dir().join("schemes"));
 
         // Load project overrides (completely replaces defaults for same command)
         let project_schemes = SchemeStorage::load_all(&project_dir)?;

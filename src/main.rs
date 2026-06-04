@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use clap::Parser;
 
 use prunify::cli::Cli;
-use prunify::config::{ConfigLoader, PrunifyConfig};
+use prunify::config::{default_prunify_dir, ConfigLoader, PrunifyConfig};
 use prunify::engine::CommandTrie;
 use prunify::error::PrunifyResult;
 use prunify::proxy::{
@@ -73,16 +73,16 @@ fn main() -> PrunifyResult<()> {
     };
 
     // 4. Load schemes
-    let default_dir = std::path::PathBuf::from(".prunify/schemes/");
+    let default_dir = default_prunify_dir().join("schemes");
     let loader = SchemeLoader::new(default_dir.clone());
     let schemes = loader.load(&config)?;
 
-    // 5. Populate trie (cached to .prunify/trie.json for fast startup)
+    // 5. Populate trie (cached to ~/.prunify/trie.json for fast startup)
     let project_dir: PathBuf = config
         .scheme_dir
         .clone()
-        .unwrap_or_else(|| PathBuf::from(".prunify/schemes/"));
-    let trie_path = PathBuf::from(".prunify/trie.json");
+        .unwrap_or_else(|| default_prunify_dir().join("schemes"));
+    let trie_path = default_prunify_dir().join("trie.json");
     let rebuild_trie = cli.rebuild_trie
         || CommandTrie::is_trie_stale(&trie_path, &[&default_dir, &project_dir]);
 
