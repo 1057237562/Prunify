@@ -38,6 +38,14 @@
       "action": "discard",
       "match_condition": {
         "type": "Regex",
+        "pattern": "^\\s{3}Compiling\\s"
+      },
+      "description": "Discard 'Compiling' build-progress lines (fresh builds)"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
         "pattern": "^\\s{4}Finished "
       },
       "description": "Discard build finished line"
@@ -46,9 +54,41 @@
       "action": "discard",
       "match_condition": {
         "type": "Regex",
-        "pattern": "^\\s{3}= note:\\s.*(dead_code|unused|warnings|generated)"
+        "pattern": "^\\s{2,}-->"
       },
-      "description": "Discard compiler notes about build warnings"
+      "description": "Discard warning/error source reference lines (--> path:line:col)"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{2,}\\|\\s*$"
+      },
+      "description": "Discard warning/error pipe-only separator lines (|)"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{2,}\\|\\s+\\^+"
+      },
+      "description": "Discard warning/error caret underline lines indicating source location"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s*\\d+\\s+\\|\\s"
+      },
+      "description": "Discard warning/error source code snippet lines with line numbers (N | code)"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{2,}= note:"
+      },
+      "description": "Discard compiler = note: lines (informational notes about warnings)"
     }
   ]
 }
