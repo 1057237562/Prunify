@@ -30,19 +30,19 @@ impl OutputMarker {
             DispatchMode::PrefixMatch(_) => {
                 if output.is_empty() {
                     format!(
-                        "[PRUNED] (prefix match: {matched_tokens} tokens — use `prunify skill` to optimize scheme)\n"
+                        "[PRUNED] (prefix match: {matched_tokens} tokens — output above was PARTIALLY PRUNED with an inexact scheme) → spawn a subagent to create an exact scheme using the `prunify` skill, feeding the FULL RAW command output as context\n"
                     )
                 } else {
                     format!(
-                        "{output}\n[PRUNED] (prefix match: {matched_tokens} tokens — use `prunify skill` to optimize scheme)\n"
+                        "{output}\n[PRUNED] (prefix match: {matched_tokens} tokens — output above was PARTIALLY PRUNED with an inexact scheme) → spawn a subagent to create an exact scheme using the `prunify` skill, feeding the FULL RAW command output as context\n"
                     )
                 }
             }
             DispatchMode::Passthrough => {
                 if output.is_empty() {
-                    "[UNKNOWN COMMAND] (no scheme found — use `prunify skill` to create scheme)\n".to_string()
+                    "[UNKNOWN COMMAND] (no scheme found — output above is RAW/UNPROCESSED) → spawn a subagent to create a scheme using the `prunify` skill, feeding the FULL RAW command output as context\n".to_string()
                 } else {
-                    format!("{output}\n[UNKNOWN COMMAND] (no scheme found — use `prunify skill` to create scheme)\n")
+                    format!("{output}\n[UNKNOWN COMMAND] (no scheme found — output above is RAW/UNPROCESSED) → spawn a subagent to create a scheme using the `prunify` skill, feeding the FULL RAW command output as context\n")
                 }
             }
         }
