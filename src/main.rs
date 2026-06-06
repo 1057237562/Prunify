@@ -19,15 +19,30 @@ fn main() -> PrunifyResult<()> {
 
     let cli = Cli::parse();
 
-    // If --list-commands, show all known schemes and exit
-    if cli.list_commands {
-        return list_known_commands(&cli);
+    // Apply --chdir / -C before anything else so all subsequent
+    // operations (scheme loading, command execution) happen in the
+    // requested directory.
+    if let Some(ref dir) = cli.chdir {
+        if let Err(e) = std::env::set_current_dir(dir) {
+            eprintln!("prunify: --chdir: cannot access {dir}: {e}");
+            std::process::exit(1);
+        }
     }
 
-    // If no command, enter interactive bash mode
-    let command = match cli.command {
-        Some(ref cmd) if !cmd.is_empty() => cmd.clone(),
-        _ => return run_interactive(cli),
+    // Resolve the command from either -c flag or positional args.
+    // Shell wrapper mode (-c): split the single string into args.
+    // Normal mode: use the trailing positional args directly.
+    let command = if let Some(ref cmd_str) = cli.command_string {
+        let trimmed = cmd_str.trim();
+        if trimmed.is_empty() {
+            return run_interactive(cli);
+        }
+        trimmed.split_whitespace().map(String::from).collect()
+    } else {
+        match cli.command {
+            Some(ref cmd) if !cmd.is_empty() => cmd.clone(),
+            _ => return run_interactive(cli),
+        }
     };
 
     // Load config, schemes, and tries
@@ -48,8 +63,28 @@ fn build_trie(schemes: &HashMap<String, Scheme>) -> CommandTrie {
     t
 }
 
+/// Load a trie from cache, or rebuild + re-cache it if stale or forced.
+fn cached_trie(
+    cache_path: &std::path::Path,
+    schemes: &HashMap<String, Scheme>,
+    scheme_dirs: &[&std::path::Path],
+    force_rebuild: bool,
+) -> CommandTrie {
+    if force_rebuild || CommandTrie::is_trie_stale(cache_path, scheme_dirs) {
+        let t = build_trie(schemes);
+        let _ = t.save_to_file(cache_path);
+        return t;
+    }
+    CommandTrie::load_from_file(cache_path).unwrap_or_else(|_| {
+        let t = build_trie(schemes);
+        let _ = t.save_to_file(cache_path);
+        t
+    })
+}
+
 /// Load config from `.prunify.yaml`, merge CLI overrides, load schemes,
-/// and build separate tries for local and global schemes.
+/// and build separate tries for local and global schemes (with caching
+/// under `~/.prunify/`).
 ///
 /// Returns (config, project_schemes, fallback_schemes, local_trie, global_trie).
 fn load_setup(
@@ -91,11 +126,36 @@ fn load_setup(
     let loader = SchemeLoader::new(fallback_dir.clone());
     let (project_schemes, fallback_schemes) = loader.load(&config)?;
 
-    // Build separate tries — local trie only has project commands,
-    // global trie only has fallback commands. This ensures prefix
-    // matching never picks a deeper global match over a local one.
-    let local_trie = build_trie(&project_schemes);
-    let global_trie = build_trie(&fallback_schemes);
+    let project_dir: PathBuf = config
+        .scheme_dir
+        .clone()
+        .unwrap_or_else(|| {
+            let local = PathBuf::from(".prunify").join("schemes");
+            if local.exists() {
+                local
+            } else {
+                fallback_dir.clone()
+            }
+        });
+
+    let prunify_dir = default_prunify_dir();
+    let force = cli.rebuild_trie;
+
+    // Cache each trie independently. When a project-local schemes dir exists
+    // separately from the fallback dir, each trie is cached and validated
+    // against only its own source directory.
+    let local_trie = if project_dir != fallback_dir {
+        let cache_path = prunify_dir.join("local_trie.json");
+        cached_trie(&cache_path, &project_schemes, &[&project_dir], force)
+    } else {
+        // No distinct local dir — just an empty trie, nothing to cache.
+        CommandTrie::new()
+    };
+
+    let global_trie = {
+        let cache_path = prunify_dir.join("global_trie.json");
+        cached_trie(&cache_path, &fallback_schemes, &[&fallback_dir], force)
+    };
 
     Ok((config, project_schemes, fallback_schemes, local_trie, global_trie))
 }
@@ -247,7 +307,10 @@ fn run_interactive(cli: Cli) -> PrunifyResult<()> {
 
     let stdin = std::io::stdin();
     loop {
-        print!("prunify $ ");
+        let cwd = std::env::current_dir()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|_| "?".to_string());
+        print!("prunify:{} $ ", cwd);
         std::io::stdout().flush()?;
 
         let mut input = String::new();
@@ -268,6 +331,26 @@ fn run_interactive(cli: Cli) -> PrunifyResult<()> {
         // Split into args by whitespace
         let args: Vec<String> = trimmed.split_whitespace().map(String::from).collect();
         if args.is_empty() {
+            continue;
+        }
+
+        // Handle built-in `cd` — change directory and continue
+        if args[0] == "cd" {
+            let target = if args.len() > 1 {
+                args[1].clone()
+            } else {
+                match std::env::var("HOME") {
+                    Ok(home) => home,
+                    Err(_) => {
+                        eprintln!("prunify: cd: HOME not set");
+                        continue;
+                    }
+                }
+            };
+            match std::env::set_current_dir(&target) {
+                Ok(()) => {}
+                Err(e) => eprintln!("prunify: cd: {target}: {e}"),
+            }
             continue;
         }
 

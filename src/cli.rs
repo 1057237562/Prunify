@@ -13,6 +13,13 @@ pub struct Cli {
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     pub command: Option<Vec<String>>,
 
+    /// Shell wrapper mode: pass the full command as a single string.
+    /// Used when prunify is configured as the default shell in OpenCode
+    /// (e.g., `prunify -c "git status"`). The string is split on whitespace
+    /// and routed through the same pipeline as positional commands.
+    #[arg(short = 'c', long)]
+    pub command_string: Option<String>,
+
     /// Custom path to scheme files
     #[arg(long)]
     pub scheme_dir: Option<String>,
@@ -29,7 +36,13 @@ pub struct Cli {
     #[arg(long)]
     pub strict: bool,
 
-    /// Force rebuild of command trie cache (ignores cached .prunify/trie.json)
+    /// Change to this directory before executing the command.
+    /// When used with `-c`, the directory change happens before the
+    /// command string is split and executed.
+    #[arg(short = 'C', long, value_name = "DIR")]
+    pub chdir: Option<String>,
+
+    /// Force rebuild of cached tries under ~/.prunify/
     #[arg(long)]
     pub rebuild_trie: bool,
 
