@@ -37,7 +37,12 @@ fn main() -> PrunifyResult<()> {
         if trimmed.is_empty() {
             return run_interactive(cli);
         }
-        trimmed.split_whitespace().map(String::from).collect()
+        // Use shell-aware splitting so quoted arguments like
+        // `-m "multi word message"` are preserved as one arg.
+        // Falls back to whitespace splitting on parse failure.
+        shlex::split(trimmed).unwrap_or_else(|| {
+            trimmed.split_whitespace().map(String::from).collect()
+        })
     } else {
         match cli.command {
             Some(ref cmd) if !cmd.is_empty() => cmd.clone(),
