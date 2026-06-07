@@ -1,0 +1,38 @@
+{
+  "command": "git diff",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^index "
+      },
+      "description": "Discard index hash and mode lines (e.g., 'index abc123..def456 100644')"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^--- "
+      },
+      "description": "Discard old file path headers ('--- a/file') — redundant with diff --git"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\+\\+\\+ "
+      },
+      "description": "Discard new file path headers ('+++ b/file') — redundant with diff --git"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^@@ "
+      },
+      "description": "Discard hunk headers ('@@ -start,count +start,count @@') — keep only actual changes"
+    }
+  ]
+}

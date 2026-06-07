@@ -1,0 +1,14 @@
+{
+  "command": "git push",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^(Enumerating objects|Counting objects|Delta compression|Compressing objects|Writing objects|Total |remote: |POST git-receive-pack)"
+      },
+      "description": "Discard progress/informational lines — only the destination URL and branch summary matter"
+    }
+  ]
+}

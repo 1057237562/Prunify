@@ -1,0 +1,14 @@
+{
+  "command": "git status --short",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^[ MADRC?!U]{2} "
+      },
+      "description": "Keep only status lines — format is XY path where X,Y ∈ {space, M, A, D, R, C, ?, !, U}"
+    }
+  ]
+}

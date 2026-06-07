@@ -1,0 +1,14 @@
+{
+  "command": "git remote -v",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — output is already concise (fetch/push URLs)"
+    }
+  ]
+}
