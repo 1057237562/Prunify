@@ -1,0 +1,14 @@
+{
+  "command": "git branch",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — output is already concise (branch list with * marker)"
+    }
+  ]
+}

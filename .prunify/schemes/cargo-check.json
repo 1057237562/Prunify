@@ -1,0 +1,38 @@
+{
+  "command": "cargo check",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{3}Checking "
+      },
+      "description": "Discard checking progress lines"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{4}Finished "
+      },
+      "description": "Discard build finished line"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^warning:"
+      },
+      "description": "Discard compiler warning headers"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^(error|Error)"
+      },
+      "description": "Keep error lines"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "command": "echo",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — output IS the data the user wants to see"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "command": "rm",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Discard all stdout — rm produces no output on success; errors go to stderr"
+    }
+  ]
+}

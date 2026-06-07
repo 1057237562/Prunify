@@ -1,0 +1,22 @@
+{
+  "command": "cargo update",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{4}Updating "
+      },
+      "description": "Discard 'Updating crates.io index' line"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep actual update notifications (Updating X, Locking, note:)"
+    }
+  ]
+}

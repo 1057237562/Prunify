@@ -1,0 +1,14 @@
+{
+  "command": "sort",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — sort output should never be pruned"
+    }
+  ]
+}

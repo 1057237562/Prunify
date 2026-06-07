@@ -1,0 +1,64 @@
+{
+  "command": "top -b -n1",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s*$"
+      },
+      "description": "Discard blank lines"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^Tasks:"
+      },
+      "description": "Discard tasks summary line"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^%Cpu\\(s\\):"
+      },
+      "description": "Discard CPU summary line"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^MiB (Mem|Swap):"
+      },
+      "description": "Discard memory summary lines"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "(^top -|^\\s*PID)"
+      },
+      "description": "Keep top header (timestamp) and column headers"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Column",
+        "index": 0,
+        "pattern": "^\\d+$"
+      },
+      "description": "Keep PID column — PIDs are always numeric and are the essential identifier"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Column",
+        "index": 11,
+        "pattern": ".*"
+      },
+      "description": "Keep COMMAND column"
+    }
+  ]
+}

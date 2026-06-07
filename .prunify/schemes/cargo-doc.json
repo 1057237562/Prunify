@@ -1,0 +1,46 @@
+{
+  "command": "cargo doc",
+  "version": 1,
+  "rules": [
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{3}(Checking|Documenting) "
+      },
+      "description": "Discard checking and documenting progress lines"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{4}Finished "
+      },
+      "description": "Discard build finished line"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^warning:"
+      },
+      "description": "Discard compiler/doc warning headers"
+    },
+    {
+      "action": "discard",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^\\s{3}= note:"
+      },
+      "description": "Discard compiler notes about warnings"
+    },
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": "^(error|Error)"
+      },
+      "description": "Keep error lines"
+    }
+  ]
+}

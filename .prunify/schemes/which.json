@@ -1,0 +1,14 @@
+{
+  "command": "which",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — output is concise file paths to executables"
+    }
+  ]
+}

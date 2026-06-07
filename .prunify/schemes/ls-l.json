@@ -1,0 +1,14 @@
+{
+  "command": "ls -l",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — output is already concise (one entry per line with permissions)"
+    }
+  ]
+}

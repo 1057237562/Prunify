@@ -1,0 +1,14 @@
+{
+  "command": "pip list",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — output is already concise (package names and versions)"
+    }
+  ]
+}

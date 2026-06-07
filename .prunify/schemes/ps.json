@@ -1,0 +1,14 @@
+{
+  "command": "ps",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — ps output is already concise (PID, TTY, TIME, CMD per line)"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "command": "id",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — output is always a single uid/gid line"
+    }
+  ]
+}

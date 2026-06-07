@@ -1,0 +1,14 @@
+{
+  "command": "make --version",
+  "version": 1,
+  "rules": [
+    {
+      "action": "keep",
+      "match_condition": {
+        "type": "Regex",
+        "pattern": ".*"
+      },
+      "description": "Keep all lines — output is always concise version/copyright info"
+    }
+  ]
+}
