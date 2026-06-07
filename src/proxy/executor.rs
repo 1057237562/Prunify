@@ -45,7 +45,7 @@ impl CommandExecutor {
     }
 
     /// Wait for a child process to finish and collect its output.
-    fn wait_for_child(child: std::process::Child) -> ExecutionResult {
+    pub fn wait_for_child(child: std::process::Child) -> ExecutionResult {
         let child_pid = child.id();
         signal_handler::set_child_pid(child_pid);
         let output = child

@@ -13,6 +13,7 @@ use prunify::proxy::{
     register_handler,
 };
 use prunify::scheme::{Scheme, SchemeLoader};
+use prunify::shell::{execute_pipeline, has_operators};
 
 fn main() -> PrunifyResult<()> {
     register_handler();
@@ -29,33 +30,33 @@ fn main() -> PrunifyResult<()> {
         }
     }
 
-    // Resolve the command from either -c flag or positional args.
-    // Shell wrapper mode (-c): split the single string into args.
-    // Normal mode: use the trailing positional args directly.
-    let command = if let Some(ref cmd_str) = cli.command_string {
+    let (command_str, command) = if let Some(ref cmd_str) = cli.command_string {
         let trimmed = cmd_str.trim();
         if trimmed.is_empty() {
             return run_interactive(cli);
         }
-        // Use shell-aware splitting so quoted arguments like
-        // `-m "multi word message"` are preserved as one arg.
-        // Falls back to whitespace splitting on parse failure.
-        shlex::split(trimmed).unwrap_or_else(|| {
+        let args = shlex::split(trimmed).unwrap_or_else(|| {
             trimmed.split_whitespace().map(String::from).collect()
-        })
+        });
+        (trimmed.to_string(), args)
     } else {
         match cli.command {
-            Some(ref cmd) if !cmd.is_empty() => cmd.clone(),
+            Some(ref cmd) if !cmd.is_empty() => {
+                let joined = cmd.join(" ");
+                (joined.clone(), cmd.clone())
+            }
             _ => return run_interactive(cli),
         }
     };
 
-    // Load config, schemes, and tries
     let (config, project_schemes, fallback_schemes, local_trie, global_trie) = load_setup(&cli)?;
     let dispatcher = Dispatcher::new(local_trie, global_trie, project_schemes, fallback_schemes);
 
-    // Execute single command through the pipeline
-    let exit_code = execute_and_print(&command, &config, &dispatcher, &cli)?;
+    let exit_code = if has_operators(&command_str) {
+        execute_pipeline(&command_str, &dispatcher, &cli)?
+    } else {
+        execute_and_print(&command, &config, &dispatcher, &cli)?
+    };
     std::process::exit(exit_code);
 }
 

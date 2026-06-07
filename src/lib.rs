@@ -6,6 +6,7 @@ pub mod engine;
 pub mod error;
 pub mod proxy;
 pub mod scheme;
+pub mod shell;
 
 pub use cli::Cli;
 pub use config::{ConfigLoader, PrunifyConfig};
