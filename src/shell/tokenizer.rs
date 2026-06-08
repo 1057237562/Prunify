@@ -512,4 +512,26 @@ mod tests {
         assert_eq!(segments[2].args, ["echo", "failed"]);
         assert_eq!(segments[2].operator, None);
     }
+
+    #[test]
+    fn test_parse_redirect_then_or() {
+        let segments = parse_command("echo hello 2>&1 || true").unwrap();
+        assert_eq!(segments.len(), 2);
+        assert_eq!(segments[0].args, ["echo", "hello"]);
+        assert_eq!(segments[0].operator, Some(ShellOperator::RedirectStderr));
+        assert_eq!(segments[0].redirect_target.as_deref(), Some("&1"));
+        assert_eq!(segments[1].args, ["true"]);
+        assert_eq!(segments[1].operator, None);
+    }
+
+    #[test]
+    fn test_parse_redirect_then_and() {
+        let segments = parse_command("make 2>&1 && echo done").unwrap();
+        assert_eq!(segments.len(), 2);
+        assert_eq!(segments[0].args, ["make"]);
+        assert_eq!(segments[0].operator, Some(ShellOperator::RedirectStderr));
+        assert_eq!(segments[0].redirect_target.as_deref(), Some("&1"));
+        assert_eq!(segments[1].args, ["echo", "done"]);
+        assert_eq!(segments[1].operator, None);
+    }
 }
