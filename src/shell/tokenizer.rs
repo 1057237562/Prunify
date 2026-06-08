@@ -240,6 +240,8 @@ pub fn parse_command(cmd: &str) -> Result<Vec<CommandSegment>, String> {
 
 /// Parse a redirect target after a `>`, `<`, `>>`, or `2>` operator.
 /// Consumes whitespace and then reads the next word (quoted or unquoted).
+/// Uses peek-first to avoid consuming shell operator characters that
+/// terminate the target.
 fn parse_redirect_target(
     chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
     _in_single: bool,
@@ -259,21 +261,25 @@ fn parse_redirect_target(
     let mut in_double = false;
     let mut escape = false;
 
-    while let Some(ch) = chars.next() {
+    while let Some(&ch) = chars.peek() {
         if escape {
+            chars.next();
             target.push(ch);
             escape = false;
             continue;
         }
         if ch == '\\' && !in_single {
+            chars.next();
             escape = true;
             continue;
         }
         if ch == '\'' && !in_double {
+            chars.next();
             in_single = !in_single;
             continue;
         }
         if ch == '"' && !in_single {
+            chars.next();
             in_double = !in_double;
             continue;
         }
@@ -281,8 +287,15 @@ fn parse_redirect_target(
             break;
         }
         if !in_single && !in_double && is_shell_operator_char(ch) {
+            // Allow `&` at the start of a redirect target for file descriptor redirects (e.g., 2>&1)
+            if ch == '&' && target.is_empty() {
+                chars.next();
+                target.push(ch);
+                continue;
+            }
             break;
         }
+        chars.next();
         target.push(ch);
     }
 
@@ -440,6 +453,52 @@ mod tests {
         assert_eq!(segments[1].args, ["make", "install"]);
         assert_eq!(segments[1].operator, Some(ShellOperator::RedirectStdout));
         assert_eq!(segments[1].redirect_target.as_deref(), Some("install.log"));
+    }
+
+    #[test]
+    fn test_parse_stderr_redirect_to_fd() {
+        // 2>&1: stderr redirect to file descriptor 1 (stdout)
+        let segments = parse_command("cargo build 2>&1").unwrap();
+        assert_eq!(segments.len(), 1);
+        assert_eq!(segments[0].args, ["cargo", "build"]);
+        assert_eq!(segments[0].operator, Some(ShellOperator::RedirectStderr));
+        assert_eq!(segments[0].redirect_target.as_deref(), Some("&1"));
+    }
+
+    #[test]
+    fn test_parse_stdout_redirect_to_fd() {
+        // >&2: stdout redirect to file descriptor 2 (stderr)
+        let segments = parse_command("echo msg >&2").unwrap();
+        assert_eq!(segments.len(), 1);
+        assert_eq!(segments[0].args, ["echo", "msg"]);
+        assert_eq!(segments[0].operator, Some(ShellOperator::RedirectStdout));
+        assert_eq!(segments[0].redirect_target.as_deref(), Some("&2"));
+    }
+
+    #[test]
+    fn test_parse_stderr_redirect_to_fd_no_space() {
+        // Also test variadic: 2>&1 without spaces after the operator
+        let segments = parse_command("make 2>&1").unwrap();
+        assert_eq!(segments[0].operator, Some(ShellOperator::RedirectStderr));
+        assert_eq!(segments[0].redirect_target.as_deref(), Some("&1"));
+    }
+
+    #[test]
+    fn test_parse_redirect_with_ampersand_file() {
+        // & terminates the redirect target (shell operator char);
+        // only & at the start of the target is a file-descriptor redirect
+        let segments = parse_command("echo data > file&1").unwrap();
+        assert_eq!(segments.len(), 2);
+        assert_eq!(segments[0].args, ["echo", "data"]);
+        assert_eq!(segments[0].operator, Some(ShellOperator::RedirectStdout));
+        assert_eq!(segments[0].redirect_target.as_deref(), Some("file"));
+        assert_eq!(segments[1].args, ["&1"]);
+        assert_eq!(segments[1].operator, None);
+    }
+
+    #[test]
+    fn test_has_operators_stderr_redirect_to_fd() {
+        assert!(has_operators("cargo test 2>&1"));
     }
 
     #[test]
