@@ -16,6 +16,21 @@ struct TrieNode {
     scheme_id: Option<String>,
 }
 
+impl TrieNode {
+    /// Find the first scheme_id in this node's subtree (DFS).
+    fn first_scheme(&self) -> Option<&str> {
+        if let Some(ref id) = self.scheme_id {
+            return Some(id.as_str());
+        }
+        for child in self.children.values() {
+            if let Some(id) = child.first_scheme() {
+                return Some(id);
+            }
+        }
+        None
+    }
+}
+
 impl CommandTrie {
     pub fn new() -> Self {
         Self::default()
@@ -48,6 +63,13 @@ impl CommandTrie {
     /// Returns Some((scheme_id, matched_token_count)) or None.
     /// e.g., search_prefix("git status --short") with only "git status" in trie
     /// returns Some(("git-status", 2))
+    ///
+    /// When the command has tokens that don't match the trie exactly but
+    /// belong to the same command family (e.g., `git log --oneline -3`
+    /// when only `git log --oneline -5` is registered), the trie finds
+    /// the first scheme among the children of the last matched node.
+    /// The returned token count reflects only the tokens that actually
+    /// matched in the trie (not the scheme's full token count).
     pub fn search_prefix(&self, command: &str) -> Option<(&str, usize)> {
         let mut node = &self.root;
         let mut best: Option<(&str, usize)> = None;
@@ -62,7 +84,17 @@ impl CommandTrie {
                         best = Some((id.as_str(), depth));
                     }
                 }
-                None => break,
+                None => {
+                    // Token not found at this level — look among siblings
+                    // for a scheme that represents the same command family.
+                    // Only fall back when we've matched at least 2 tokens
+                    // (e.g., "git log --oneline -3" for "git log --oneline -5"),
+                    // not for single-token mismatches (e.g., "git log" vs "git status").
+                    if best.is_none() && depth >= 2 {
+                        best = node.first_scheme().map(|id| (id, depth));
+                    }
+                    break;
+                }
             }
         }
 
@@ -191,5 +223,49 @@ mod tests {
         let trie = CommandTrie::new();
         assert_eq!(trie.search_exact("anything"), None);
         assert_eq!(trie.search_prefix("anything"), None);
+    }
+
+    #[test]
+    fn test_sibling_scheme_fallback() {
+        let mut trie = CommandTrie::new();
+        trie.insert("git log --oneline -5", "git-log-oneline-5");
+        trie.insert("git log --oneline -10", "git-log-oneline-10");
+        // -3 doesn't match exactly but should find sibling scheme
+        let result = trie.search_prefix("git log --oneline -3");
+        assert!(result.is_some());
+        let (id, depth) = result.unwrap();
+        // Should match one of the registered schemes
+        assert!(
+            id == "git-log-oneline-5" || id == "git-log-oneline-10",
+            "expected sibling scheme, got {id}"
+        );
+        // Depth should be 3 (tokens that actually matched: git, log, --oneline)
+        assert_eq!(depth, 3);
+    }
+
+    #[test]
+    fn test_sibling_scheme_fallback_deep() {
+        let mut trie = CommandTrie::new();
+        trie.insert("git log --oneline -5", "git-log-oneline-5");
+        // "git log -3" should find nothing — "-3" is a child of "log",
+        // and "log" node has no scheme, and its children are only "--oneline"
+        // which then has children "-5". So from "log" → search children → 
+        // "--oneline" → no scheme → search children → "-5" → has scheme
+        let result = trie.search_prefix("git log -3");
+        assert!(result.is_some());
+        let (id, depth) = result.unwrap();
+        assert_eq!(id, "git-log-oneline-5");
+        assert_eq!(depth, 2); // only "git", "log" matched
+    }
+
+    #[test]
+    fn test_sibling_fallback_with_multiple_children() {
+        let mut trie = CommandTrie::new();
+        trie.insert("git status", "git-status");
+        trie.insert("git log", "git-log");
+        // "git push" → "push" not a child of "git".
+        // Depth is only 1 ("git"), so fallback is NOT applied —
+        // single-token mismatches don't trigger sibling fallback.
+        assert_eq!(trie.search_prefix("git push"), None);
     }
 }
